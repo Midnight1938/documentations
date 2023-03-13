@@ -1,0 +1,139 @@
+#+title: Documentation of things learnt
+
+* Table of Contents :toc:
+- [[#languages][Languages]]
+  - [[#flutter][Flutter]]
+  - [[#container-images][Container images]]
+  - [[#getting-a-web-server-running][Getting a web server running]]
+  - [[#good-packages-for-flutter][Good packages for flutter]]
+  - [[#interesting-flutter-sources][Interesting Flutter sources]]
+  - [[#other-sources][Other sources]]
+- [[#kubernetes][Kubernetes]]
+  - [[#podman][Podman]]
+- [[#software][Software]]
+  - [[#emacs-and-org-mode][Emacs and org mode]]
+  - [[#onlyoffice-in-podman][Onlyoffice in Podman]]
+
+* Languages
+** Flutter
+** Container images
+A good container image seems to be the ~instrumentisto/flutter~ image available from distributors like quary and docker hub
+** Getting a web server running
+You can simply run the given code to run a web server model that you can access from your host computer via ~localhost:3000~. With the ~--release~ tag being optional.
+#+begin_src bash
+flutter run --release -d web-server --web-hostname=0.0.0.0 --web-port=3000
+#+end_src
+** Good [[https:pub.dev/][packages]] for flutter
+- [[https:medium.flutterdevs.com/exploring-csv-in-flutter-fafc57b02eb1][Working with CSV]]
+- [[https:pub.dev/packages/printing][Print to pdf]]
+- [[https:pub.dev/packages/sqflite][SQLite]]
+- [[https:pub.dev/packages/sqflite_common_ffi][SQLite3 based ffi implementation]]
+** Interesting Flutter sources
+- [[https:flutter.dev/events/puzzle-hack][Puzzle Hack]]
+- [[youtube:PaPUkxYHDUw][Clocks with flutter]]
+*** Android Sources
+**** Android Design Toolkit
+- [[https:flutter.github.io/samples/web/material_3_demo/#/][Material 3 showcase]]
+
+*** Windows
+**** Windows Design Toolkit
+- [[https:learn.microsoft.com/en-us/windows/apps/design/basics/][Design Basics]]
+- [[https:learn.microsoft.com/en-us/windows/apps/design/downloads/][Windows apps toolkits and samples]]
+- [[youtube:bee2AHQpGK4][Windows style titlebar]]
+
+*** Linux Sources
+**** Packaging Apps
+- [[github:Merrit/flutter_flatpak_example][Flatpak packaging]]
+** Other sources
+- A [[https:copr.fedorainfracloud.org/coprs/carzacc/flutter/][copr repo]] for setting flutter up in fedora
+  Which installs the SDK in the ~~/flutter~ folder
+
+* Kubernetes
+** Podman
+*** Getting setup in Fedora
+**** Installing GUIs
+***** Install the Podman desktop
+Run the command:
+#+begin_src bash
+flatpak install io.podman_desktop.PodmanDesktop
+#+end_src
+***** Podman TUI
+#+begin_src bash
+sudo dnf install podman-tui
+#+end_src
+***** Installing Pods
+Run the command:
+#+begin_src bash
+flatpak install flathub com.github.marhkb.Pods
+#+end_src
+**** Probably still want some docker?
+Set it up according to docker
+**** Documentation and sites
+- [[https:fedoramagazine.org/docker-and-fedora-37-migrating-to-podman/][Fedora Magazine Article about migration to podman]]
+- [[https:podman.io][Podman Website]]
+  - [[https:podman.io/getting-started/][Getting Started]]
+- [[https:podman-desktop.io][Podman Desktop tool]]
+  - [[https:podman-desktop.io/docs/intro][Documentation]]
+  - [[https:podman-desktop.io/docs/getting-started/getting-started][Getting started]]
+- [[https:blog.while-true-do.io/tag/podman][while-true-do blog]]
+*** Working with VSCode
+**** Setup for remote
+Setup the containers working by setting these in the VSCode settings:
+#+begin_src json
+"docker.dockerPath": "/usr/bin/podman",
+"docker.environment": {
+    "DOCKER_HOST": "unix:///run/user/1000/podman/podman.sock"
+},
+"dev.containers.dockerComposePath": "podman-compose",
+"dev.containers.dockerPath": "podman"
+#+end_src
+Do check for the /1000/ by running ~id~ in the command line.
+
+**** Troubleshooting
+Thanks to [[https:opensource.com/article/21/7/vs-code-remote-containers-podman][Opensource.com]]
+You can simply setup the podman container by adding these to the ~devcontainer.json~
+#+begin_src json
+  "runArgs": ["--userns=keep-id"],
+  "containerEnv": {
+    "HOME": "/home/midnight"
+  },
+  "remoteUser": "midnight",
+  "containerUser": "midnight",
+  "workspaceMount": "source=${localWorkspaceFolder},target=/workspace,type=bind,Z",
+  "workspaceFolder": "/workspace"
+#+end_src
+Do try [[https:blog.lifeishao.com/2021/12/30/replacing-docker-with-podman-for-your-vscode-devcontainers/][lifeishao]]
+
+* Software
+** Emacs and org mode
+*** Web Sources
++ [[https:orgmode.org/worg/org-contrib/babel/languages/ob-doc-C.html][Working with programming languages]]
+*** Tricks and Sips
++ To change the numbering beside headings, use
+  ~#+options: num:nil~ the nil can be 1,2,3,4 for the depth the numbering reaches
++ Use the command ~#+org_attr~ to edit image captions, widths.
+  + ~#+attr_html:~ is an alternative for html exports
++ The ~:toc:~ tag can create a table of contents automatically. Just needs to be at the top.
++ Use the ~#+startup: show2levels~ to collapse the headers by default, goes from all to 1
++ The ~org-superstar-mode~ controls the beautification of the orgmode heading bullets
+** Onlyoffice in Podman
+- The current smooth run is with the ~7.2.0~ version of the Desktop edition on ~Hyprland~
+*** Pulling the repo
+#+begin_src bash
+git clone https://github.com/ONLYOFFICE/Docker-DocumentServer.git
+cd Docker-DocumentServer/
+#+end_src
+*** Using Buildah to build the image
+#+begin_src bash
+sudo dnf install buildah
+buildah bud --tag onlyofficeds:buildah -f ./Dockerfile
+#+end_src
+*** Running the ONLYOFFICE Docs container from a local directory without root permissions
+After building the ONLYOFFICE Docs image with Buildah as described above, run the ONLYOFFICE Docs container using the following command:
+#+begin_src bash
+podman run -i -t -d -p 8003:80 -p 4430:443 --restart=always \
+ -v /app/onlyoffice/DocumentServer/logs:/var/log/onlyoffice:Z  \
+ -v /app/onlyoffice/DocumentServer/data:/var/www/onlyoffice/Data:Z  \
+ -v /app/onlyoffice/DocumentServer/lib:/var/lib/onlyoffice:Z \
+ -v /app/onlyoffice/DocumentServer/db:/var/lib/postgresql:Z localhost/onlyofficeds:buildah
+#+end_src
