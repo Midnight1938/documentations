@@ -7,12 +7,35 @@
   - [[#getting-a-web-server-running][Getting a web server running]]
   - [[#good-packages-for-flutter][Good packages for flutter]]
   - [[#interesting-flutter-sources][Interesting Flutter sources]]
+    - [[#android-sources][Android Sources]]
+      - [[#android-design-toolkit][Android Design Toolkit]]
+    - [[#windows][Windows]]
+      - [[#windows-design-toolkit][Windows Design Toolkit]]
+    - [[#linux-sources][Linux Sources]]
+      - [[#packaging-apps][Packaging Apps]]
   - [[#other-sources][Other sources]]
 - [[#kubernetes][Kubernetes]]
   - [[#podman][Podman]]
+    - [[#getting-setup-in-fedora][Getting setup in Fedora]]
+      - [[#installing-guis][Installing GUIs]]
+        - [[#install-the-podman-desktop][Install the Podman desktop]]
+        - [[#podman-tui][Podman TUI]]
+        - [[#installing-pods][Installing Pods]]
+      - [[#probably-still-want-some-docker][Probably still want some docker?]]
+      - [[#documentation-and-sites][Documentation and sites]]
+    - [[#working-with-vscode][Working with VSCode]]
+      - [[#setup-for-remote][Setup for remote]]
+      - [[#troubleshooting][Troubleshooting]]
 - [[#software][Software]]
   - [[#emacs-and-org-mode][Emacs and org mode]]
+    - [[#web-sources][Web Sources]]
+    - [[#tricks-and-sips][Tricks and Sips]]
   - [[#onlyoffice-in-podman][Onlyoffice in Podman]]
+    - [[#pulling-the-repo][Pulling the repo]]
+    - [[#using-buildah-to-build-the-image][Using Buildah to build the image]]
+    - [[#running-the-onlyoffice-docs-container-from-a-local-directory-without-root-permissions][Running the ONLYOFFICE Docs container from a local directory without root permissions]]
+  - [[#hibernation-setup][Hibernation Setup]]
+    - [[#opensuse][OpenSuse]]
 
 * Languages
 ** Flutter
@@ -137,3 +160,18 @@ podman run -i -t -d -p 8003:80 -p 4430:443 --restart=always \
  -v /app/onlyoffice/DocumentServer/lib:/var/lib/onlyoffice:Z \
  -v /app/onlyoffice/DocumentServer/db:/var/lib/postgresql:Z localhost/onlyofficeds:buildah
 #+end_src
+** Hibernation Setup
+*** OpenSuse 
+- [[https:suse.com/support/kb/doc/?id=000020287][According to Suse]]
+#+begin_src bash
+echo 'add_dracutmodules+=" resume "' > /etc/dracut.conf.d/resume.conf
+chmod a-x /usr/lib/systemd/systemd-hibernate-resume
+dracut -f
+grub2-mkconfig -o /boot/grub2/grub.cfg
+reboot
+#+end_src
+- Redditor Advises
+#+begin_src bash
+sudo systemctl enable nvidia-suspend nvidia-hibernate nvidia-resume
+#+end_src
+
