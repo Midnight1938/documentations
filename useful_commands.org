@@ -27,14 +27,20 @@ They are in either of the two:
 #+end_src
 And uses the following format in the .desktop
 #+begin_src conf
-[Desktop Entry]
-Encoding=UTF-8
-Version=1.0
-Type=Application
-Terminal=false
-Exec=/path/to/executable
-Name=Name of Application
-Icon=/path/to/icon
+  [Desktop Entry]
+  Encoding=UTF-8
+  Version=1.0
+  Type=Application
+  Terminal=false
+  Exec=/path/to/executable
+  Name=Name of Application
+  Icon=/path/to/icon
+  # Optional
+  StartupWMClass="name", "Alt Name"
+  GenericName=Type of App
+  Categories=Game;Browser;Favorites;
+  StartupNotify=false
+  Keywords=web;internet;
 #+end_src
 * Find files with the text
 #+begin_src bash
