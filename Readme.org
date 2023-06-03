@@ -161,7 +161,7 @@ podman run -i -t -d -p 8003:80 -p 4430:443 --restart=always \
  -v /app/onlyoffice/DocumentServer/db:/var/lib/postgresql:Z localhost/onlyofficeds:buildah
 #+end_src
 ** Hibernation Setup
-*** OpenSuse 
+*** OpenSuse
 - [[https:suse.com/support/kb/doc/?id=000020287][According to Suse]]
 #+begin_src bash
 echo 'add_dracutmodules+=" resume "' > /etc/dracut.conf.d/resume.conf
@@ -170,8 +170,14 @@ dracut -f
 grub2-mkconfig -o /boot/grub2/grub.cfg
 reboot
 #+end_src
+- In case of slow shutdowns and reboots
+#+begin_src bash
+  sudo gedit /etc/systemd/system.conf
+  #Edit DefaultTimeoutStopSec
+  systemctl daemon-reload
+#+end_src
 - Redditor Advises
 #+begin_src bash
-sudo systemctl enable nvidia-suspend nvidia-hibernate nvidia-resume
+  sudo systemctl enable nvidia-suspend nvidia-hibernate nvidia-resume
 #+end_src
 
