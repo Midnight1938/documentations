@@ -1,0 +1,50 @@
+#+title: Kuberetes and Cloud native essentials
+#+date <2023-06-07 Wed>
+#+due: <2023-06-30 Fri>
+#+STARTUP: inlineimages
+
+* Table Of Contents :toc:
+- [[#cloud-native-architecture-fundamentals][Cloud Native Architecture Fundamentals]]
+  - [[#fundamentals][Fundamentals]]
+  - [[#characteristics-of-cloud-native-architecture][Characteristics of Cloud Native Architecture]]
+  - [[#autoscaling][Autoscaling]]
+  - [[#serverless][Serverless]]
+  - [[#open-standards][Open Standards]]
+  - [[#cloud-native-roles--site-reliability-engineering][Cloud Native Roles & Site Reliability Engineering]]
+  - [[#community-and-governance][Community and Governance]]
+  - [[#cncf-graduation-criteria-v13][CNCF Graduation Criteria v1.3]]
+  - [[#additional-resources][Additional Resources]]
+
+* Cloud Native Architecture Fundamentals
+With the rise of cloud computing, the requirements and possibilities for developing, deploying and designing applications have changed significantly.
++ Objectives
+  - Characteristics of Cloud Native Architecture
+  - Benifits of autoscaling and serverless
+  - Open standards
+** Fundamentals
+[[mono_v_micro.png]]
+At the core, the idea of cloud native architecture is to optimize your software for cost efficiency, reliability and faster time-to-market by using a combination of cultural, technological and architectural design patterns.
+It can provide solutions for the increasing complexity of applications and the growing demand by users. The basic idea is to break down your application in smaller pieces which makes them more manageable.
+Instead of providing all functionality in a single application, you have multiple decoupled applications that communicate with each other in a network. The independent applications are what are reffered to as microservices.
+** Characteristics of Cloud Native Architecture
+*** High Automation
+Modern automation tools and CI/CD pipelines help manage the moving parts of the application by automating the boiler plate.
+Building, testing and deploying applications as well as infrastructure with minimal human involvement allows for fast, frequent and incremental changes to production.
+A reliable automated system also allows for much easier disaster recovery if you have to rebuild your whole system.
+*** Self Healing
+Cloud native application frameworks and infrastructure components include health checks which help monitor your application from the inside and automatically restart them in case of failure. Since the application has been compartmentalized, there is a chance that only parts of your application stop working or get slower, while other parts don’t.
+*** Scalable
+Scaling your application describes the process of handling more load while still providing a pleasant user experience. One way of scaling can be starting multiple copies of the same application and distributing the load across them.
+The two types are vertical and horizontal. This can also be automated.
+*** Cost- Efficient
+*** Maintainable
+*** Security
+** Autoscaling
+** Serverless
+** Open Standards
+** Cloud Native Roles & Site Reliability Engineering
+** Community and Governance
+** CNCF Graduation Criteria v1.3
+** Additional Resources
+
+
