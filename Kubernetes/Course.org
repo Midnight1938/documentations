@@ -1,6 +1,6 @@
 #+title: Kuberetes and Cloud native essentials
 #+date <2023-06-07 Wed>
-#+due: <2023-06-30 Fri>
+#+duedate: <2023-06-30 Fri>
 #+STARTUP: inlineimages
 
 * Table Of Contents :toc:
@@ -27,6 +27,8 @@ At the core, the idea of cloud native architecture is to optimize your software 
 It can provide solutions for the increasing complexity of applications and the growing demand by users. The basic idea is to break down your application in smaller pieces which makes them more manageable.
 Instead of providing all functionality in a single application, you have multiple decoupled applications that communicate with each other in a network. The independent applications are what are reffered to as microservices.
 ** Characteristics of Cloud Native Architecture
+A good baseline and starting point for your cloud native journey is the [[https:12factor.net/][twelve-factor app]].
+It is a guideline for developing cloud native applications, which starts with simple things like version control, environment-aware configuration, and more sophisticated patterns like statelessness and concurrency.
 *** High Automation
 Modern automation tools and CI/CD pipelines help manage the moving parts of the application by automating the boiler plate.
 Building, testing and deploying applications as well as infrastructure with minimal human involvement allows for fast, frequent and incremental changes to production.
@@ -37,14 +39,42 @@ Cloud native application frameworks and infrastructure components include health
 Scaling your application describes the process of handling more load while still providing a pleasant user experience. One way of scaling can be starting multiple copies of the same application and distributing the load across them.
 The two types are vertical and horizontal. This can also be automated.
 *** Cost- Efficient
+Orchestaration softwares like kubernetes make the process of scaling applications in high traffic situations, as well as down, by utilizing usage based pricing.
 *** Maintainable
+The use of microservices ensures the application is portable, easy to test and distribute.
 *** Security
+Environments are shared between multiple customers or teams, calling for a security model.
+Systems used to be divided in zones that denied access from different networks or team. Once inside you could access every system inside.
+[[https:en.wikipedia.org/wiki/Zero_trust_security_model][Zero trust computing]] mitigates that by requiring authentication from every user and process.
 ** Autoscaling
+[[horiz_vs_vert.png]]
+
+It describes the dynamic adjustment of resources based on the current demand. Imagine that you have to carry a heavy object that you cannot pick up. You can build muscle to carry it yourself, but your body has an upper limit of strength. That's vertical scaling. You can also call your friends and ask them to help you and share the work. That's horizontal scaling.
+The two scaling methods are as follows.
+*** Vertical Scaling
+It describes the change in size of the underlying hardware, it is quite limited and works not only within hardware limits of the bare metal, but also the VMs. They can be scaled up by letting them consume more CPU and Memory, the upper limit itself is determined by the underlying hardware. Which can also be scaled up. 
+*** Horizontal Scaling
+It describes the process of spawning new compute resources which can be new copies of your application process, VMs, or - in a less immediate way - even new racks of servers and other hardware.
+*** Whats the benifits
+The most essential part is to configure a min and max limit of instances and a metric to trigger the scale. Which can be configured by running tests to analyze the scaling requirements.
+loud environments which rely on usage based on-demand pricing models provide very effective platforms for automatic scaling, with the ability to provision a large amount of resources within seconds or even scale to zero, if resources are temporarily not needed.
+Even if the scaling of applications and the underlying infrastructure is not automated at first, the ability to scale can increase availability and resilience of services in more traditional environments.
 ** Serverless
+It does not mean that there are no server, it simply implies that it is someone elses server.
+All cloud providers have some form of proprietary serverless runtimes. Called [[https:youtube.com/watch?v=EOIja7yFScs][Function as a service]]. The cloud provider abstracts the underlying infrastructure, allowing the user to upload zips or container images to deploy their software.
+
+Serverless has a stronger focus on the on demand provisioning and scaling of applications. Autoscaling is a core concept of this system, and can include scaling and provisioning based on events such as oncoming requests. Allowing for precise billing based on events than time-based.
+
+Instead of fully replacing container orchestration platforms or traditional VMs, FaaS systems are often used in combination or as an extension of existing platforms since they allow for a very fast deployment and make for excellent testing and sandbox environments. Like in [[https:tiiny.site][Tiny site]].
+
+*** Standardization
+Many cloud providers have proprietary offerings that make it difficult to switch between different platforms.
+To address these problems, the [[https:cloudevents.io/][CloudEvents]] project was founded and provides a specification of how event data should be structured. Events are the basis for scaling serverless workloads or triggering corresponding functions.
+The more vendors and tools adopt such a standard, the easier it becomes to use serverless and event-driven architectures on multiple platforms.
+Applications that are written for serverless platforms have even stricter requirements for cloud native architecture, but at the same time can benefit most from them. Writing small, stateless applications make them a perfect fit for event or data streams, scheduled tasks, business logic or batch processing.
+
 ** Open Standards
 ** Cloud Native Roles & Site Reliability Engineering
 ** Community and Governance
 ** CNCF Graduation Criteria v1.3
 ** Additional Resources
-
-
