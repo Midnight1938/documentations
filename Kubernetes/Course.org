@@ -74,7 +74,93 @@ The more vendors and tools adopt such a standard, the easier it becomes to use s
 Applications that are written for serverless platforms have even stricter requirements for cloud native architecture, but at the same time can benefit most from them. Writing small, stateless applications make them a perfect fit for event or data streams, scheduled tasks, business logic or batch processing.
 
 ** Open Standards
+Many cloud native tech relies on open source software, which prevents vendor lock-in and makes the implementation of industry standards easy.
+The big problem is building and distributing software packages, as applications have a lot of requirements and dependencies for the underlying system and application runtime. Hence [[https:opencontainers.org/][Open Container Initiative]] exists.
+Under the Linux Foundation,oci provides two standards which define the way how to build and run containers. Namely [[https:github.com/opencontainers/image-spec][image-spec]] which defines container building and, [[https:github.com/opencontainers/runtime-spec][runtime-spec]], which specifies configuration, execution env and container lifecycles.
+
+Open standards like this help and complement other systems like Kubernetes, which is the de facto standard platform for orchestrating containers. A few standards in the following chapters are:
++ [[https:opencontainers.org/][OCI Spec]]: image, runtime and distribution specification on how to run, build an distribute containers
++ [[https:github.com/containernetworking/cni][Container Network Interface (CNI)]]: A specification on how to implement networking for Containers.
++ [[https:github.com/kubernetes/cri-api][Container Runtime Interface (CRI)]]: A specification on how to implement container runtimes in container orchestration systems.
++ [[https:github.com/container-storage-interface/spec][Container Storage Interface (CSI)]]: A specification on how to implement storage in container orchestration systems.
++ [[https:smi-spec.io/][Service Mesh Interface (SMI)]]: A specification on how to implement Service Meshes in container orchestration systems with a focus on Kubernetes.
+
+Following this approach, other systems like Prometheus or OpenTelemetry evolved and thrived in this ecosystem and provide additional standards for monitoring and observability.
 ** Cloud Native Roles & Site Reliability Engineering
+Jobs in cloud computing are more difficult to describe and the transitions are smoother, since the responsibilities are often shared between multiple people coming from different areas and with different skills. Some common roles are:
+*** Cloud Architect
+Responsible for adoption of cloud technologies, designing application landscape and infrastructure.
+With a focus on security, scalability and deployment mechanisms.
+*** DevOps Engineer
+A simple combination of developer and administrator, but that doesn't do the role justice.
+DevOps engineers use tools and processes that balance out software development and operations. Starting with approaches to writing, building, and testing software throughout the deployment lifecycle.
+*** Security Engineer
+Perhaps the easiest role to grasp. Nonetheless, the role of security engineers has changed significantly.
+Cloud technologies have created new attack vectors and these days the role has to be lived much more inclusive and as an integral part of a team.
+*** DevSecOps Engineer
+In an effort to make security an integral part of modern IT environments, it combines the roles of the previous two.
+This role is often used to build bridges between more traditional development and security teams.
+*** Data Engineer
+They face the challenge of collecting, storing, and analyzing the vast amounts of data that are being or can be collected in large systems. This can include provisioning and managing specialized infrastructure, as well as working with that data.
+*** Full-Stack Developer
+An all-rounder who is at home in frontend, backend development, and infrastructure essentials.
+*** Site Reliability Engineer (SRE)
+A role with a stronger definition is the [[https:en.wikipedia.org/wiki/Site_reliability_engineering][Site Reliability Engineer (SRE)]]. Founded around 2003 at Google.
+The overarching goal of SRE is to create and maintain software that is reliable and scalable. To achieve this, software engineering approaches are used to solve operational problems and automate operation tasks.
+To measure performance and reliability, SREs use three main metrics:
++ Service Level Objectives (SLO): "Specify a target level for the reliability of your service.”
+  - A goal that is set, for example reaching a service latency of less that 100ms.
++ Service Level Indicators (SLI): "A carefully defined quantitative measure of some aspect of the level of service that is provided"
+  - For example how long a request actually needs to be answered.
++ Service Level Agreements (SLA): Answers the question what happens if SLOs are not met.
+Around these metrics, SREs might define an error budget. An error budget defines the amount (or time) of errors your application can have, before actions are taken, like stopping deployments to production.
 ** Community and Governance
+The Cloud Native Computing Foundation (CNCF) supports and hosts numerous open source projects that are considered industry standards. These projects go through stages of sandbox and incubation before graduating. The CNCF community provides support throughout the lifecycle of these projects, including visibility and classification in the CNCF Landscape. The CNCF has a Technical Oversight Committee (TOC) responsible for defining the technical vision, approving new projects, and gathering feedback from the end-user committee.
+However, the TOC encourages self-governance and community ownership of the projects, following the principle of "minimal viable governance." Guidelines cover project maintenance, review, release, user groups, and more. Governance in CNCF projects differs from traditional approaches as it relies on project communities to establish and enforce rules due to the freedom offered by cloud native technologies.
 ** CNCF Graduation Criteria v1.3
+Theres a maturity level assigned to each CNCF initiative. The proposed projects must specify their preffered degree of maturity.
+*** Sandbox Stage
+This stage is the entry point for early stage projects. Sandbox projects should be early-stage projects that the CNCF TOC believes warrant experimentation. The Sandbox should provide a beneficial, neutral home for such projects, in order to foster collaborative development.
+*** Incubating Stage
+The Project to be accepted to the incubation stage must have met the sandbox stage requirements plus full technical due diligence has been be performed, including:
++ Document that it is being used successfully in production by at least three independent direct adopters.
++ Have a healthy number of committers. A committer is defined as someone with the commit bit; i.e., someone who can accept contributions to some or all of the project.
++ Demonstrate a substantial ongoing flow of commits and merged contributions.
++ A clear versioning scheme.
++ Clearly documented security processes explaining how to report security issues to the project, and describing how the project provides updated releases or patches to resolve security vulnerabilities.
++ Specifications must have at least one public reference implementation.
+*** Graduation Stage
+To graduate from sandbox or incubating status, or for a new project to join as a graduated project, a project must meet the incubation stage criteria plus:
++ Have committers from at least two organizations
++ Have achieved and maintained a Core Infrastructure Initiative Best Practices Badge
++ Have completed an independent and third party security audit with results published of similar scope and quality and all critical vulnerabilities need to be addressed before graduation
++ Explicitly define a project governance and committer process
++ Explicitly define the criteria, process and offboarding or emeritus conditions for project maintainers; or those who may interact with the CNCF on behalf of the project. The list of maintainers should preferably be stored in a MAINTAINERS.md file and audited at a minimum of an annual cadence
++ Have a public list of project adopters for at least the primary repo (e.g., ADOPTERS.md or logos on the project website).
+  For a specification, have a list of adopters for the implementation(s) of the spec.
++ Receive a supermajority vote from the TOC to move to graduation stage. Projects can attempt to move directly from sandbox to graduation, if they can demonstrate sufficient maturity. Projects can remain in an incubating state indefinitely, but they are normally expected to graduate within two years
 ** Additional Resources
+*** Cloud Native Architecture
++ [[https:infoq.com/articles/cloud-native-architecture-adoption-part1/][Adoption of Cloud-Native Architecture, Part 1: Architecture Evolution and Maturity]], by Srini Penchikala, Marcio Esteves, and Richard Seroter (2019)
++ [[https:cloud.google.com/blog/products/application-development/5-principles-for-cloud-native-architecture-what-it-is-and-how-to-master-it][5 principles for cloud-native architecture-what it is and how to master it]], by Tom Grey (2019)
++ [[https:tanzu.vmware.com/cloud-native][What is cloud native and what are cloud native applications?]]
++ [[https:landscape.cncf.io/][CNCF Cloud Native Interactive Landscape]]
+
+*** Well-Architected Framework
++ [[https:cloud.google.com/architecture/framework][Google Cloud Architecture Framework]]
++ [[https:docs.aws.amazon.com/wellarchitected/latest/framework/welcome.html][AWS Well-Architected Framework]]
++ [[https:docs.microsoft.com/en-us/azure/architecture/framework/][Microsoft Azure Well-Architected Framework]]
+
+*** Microservices
++ [[https:microservices.io/][What are microservices?]]
++ [[https:martinfowler.com/articles/microservices.html][Microservices]], by James Lewis and Martin Fowler
++ [[https:nginx.com/blog/microservices-at-netflix-architectural-best-practices/][Adopting Microservices at Netflix: Lessons for Architectural Design]]
+
+*** Serverless
++ [[https:cncf.io/blog/2018/02/14/cncf-takes-first-step-towards-serverless-computing/][The CNCF takes steps toward serverless computing]], by Kristen Evans (2018)
++ [[https:github.com/cncf/wg-serverless/tree/master/whitepapers/serverless-overview][CNCF Serverless Whitepaper v1.0]] (2019)
++ [[https:cloud.google.com/serverless/whitepaper][Serverless Architecture]]
+
+*** Site Reliability Engineering
++ [[https:sre.google/sre-book/introduction/][SRE Book]], by Benjamin Treynor Sloss (2017)
++ [[https:iximiuz.com/en/posts/devops-sre-and-platform-engineering/][DevOps, SRE, and Platform Engineering]], by Ivan Velicho (2021)
