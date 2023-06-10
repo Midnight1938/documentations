@@ -1,5 +1,5 @@
 #+title: Kuberetes and Cloud native essentials
-#+date <2023-06-07 Wed>
+#+date: <2023-06-07 Wed>
 #+duedate: <2023-06-30 Fri>
 #+STARTUP: inlineimages
 
@@ -14,6 +14,19 @@
   - [[#community-and-governance][Community and Governance]]
   - [[#cncf-graduation-criteria-v13][CNCF Graduation Criteria v1.3]]
   - [[#additional-resources][Additional Resources]]
+- [[#container-orchestration][Container Orchestration]]
+  - [[#use-of-containers][Use of Containers]]
+  - [[#container-basics][Container Basics]]
+  - [[#running-containers][Running Containers]]
+  - [[#building-container-images][Building Container Images]]
+  - [[#demo-building-container-images][Demo: Building Container Images]]
+  - [[#security][Security]]
+  - [[#container-orchestration-fundamentals][Container Orchestration Fundamentals]]
+  - [[#networking][Networking]]
+  - [[#service-discovery--dns][Service Discovery & DNS]]
+  - [[#service-mesh][Service Mesh]]
+  - [[#storage][Storage]]
+  - [[#additional-resources-1][Additional Resources]]
 
 * Cloud Native Architecture Fundamentals
 With the rise of cloud computing, the requirements and possibilities for developing, deploying and designing applications have changed significantly.
@@ -164,3 +177,50 @@ To graduate from sandbox or incubating status, or for a new project to join as a
 *** Site Reliability Engineering
 + [[https:sre.google/sre-book/introduction/][SRE Book]], by Benjamin Treynor Sloss (2017)
 + [[https:iximiuz.com/en/posts/devops-sre-and-platform-engineering/][DevOps, SRE, and Platform Engineering]], by Ivan Velicho (2021)
+
+* Container Orchestration
+Learn about the challenges and opportunities of container orchestration and why it has special requirements regrading networking and storage
+** Use of Containers
+The history of Application development goes hand in hand with with the history of packaging said apps for different platforms and OSes
+
+If you consider a simple python application, the system needs to fulfill specific requirements to be able to run it:
+1. Install and configure basic OS
+2. Install core python packages
+3. Install specific python extensions for the program
+4. Configure networking for your system.
+5. Connect to 3rd party systems like a database or cache storage.
+The developer may know their application best, but its often the sys admin who provides the infrastructure, installs the deps, and configures the system. Making the process quite error prone and hard to maintain.
+Hence why servers are configured for a single purpose like running a DB or an application server, then gets connected to the network.
+
+To get effficient use out of the server hardware, VMs can be used to emulate a full server with CPU, mem, storage, networking, OS and the software on top. Allowing multiple isolated servers to run on the same hardware. Virtualization was the most efficient way to run isolated application easily. But it came with some overhead as one had to run a whole OS including the kernel.
+Now, containers exist, and can solve it all, while being more efficient.
+** Container Basics
+*** Pre Containers
+[[chroot.png]]
+Before containerization there was ~chroot~, which could be used to isolate a process from the root file system and "hide" the files from the process and simulade a new root dir.
+To isolate a process even more than chroot can do, current Linux kernels provide features like namespaces and cgroups. Namespaces can be used to isolate various resources, like a network namespace can  provide a complete abstraction of network interfaces and routing tables. Currently, there are 8 namespaces:
++ ~id~ - process ID, provides a process with its own set of process IDs (sub processes).
++ ~net~ - Network allows the processes to have their own network stack, including the IP.
++ ~mnt~ - Mount abstracts the filesystem view and manages mount points.
++ ~ipc~ - Inter-process communication, provides separation of named shared memory segments.
++ ~user~ - provides process with their own set of user IDs and group IDs.
++ ~uts~ - Unix time sharing allows processes to have their own hostname and domain name.
++ ~cgroup~ - Allows a process to have its own set of cgroup root directories. When you want to limit your application container to let’s say 4GB of memory, cgroups are used under the hood to ensure these limits.
++ ~time~ - Virtualizethe newest namespace can be used to virtualize the clock of the system.
+*** Containers and the difference
+[[Trad_v_Virt_v_Contain.png]]
+While a VM emulates a whole machine, including the OS and kernel. The containers merely share the kernel of the host machine and, are only isolated processes. A VM comes with overhead, like boot time, size, or resource usage. While a container is quite literally a process, like a local app, making is much faster and smaller.
+Docker has become synonumous with building and running containers, but they merely stitched together existing tech in a smart way to make containers user friendly.
+In many cases youre using both tech to benifit from the efficency of containers and the security advantages of isolated VMs
+** Running Containers
+
+*** Demo: Running Containers
+** Building Container Images
+** Demo: Building Container Images
+** Security
+** Container Orchestration Fundamentals
+** Networking
+** Service Discovery & DNS
+** Service Mesh
+** Storage
+** Additional Resources
