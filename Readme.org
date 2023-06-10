@@ -7,35 +7,12 @@
   - [[#getting-a-web-server-running][Getting a web server running]]
   - [[#good-packages-for-flutter][Good packages for flutter]]
   - [[#interesting-flutter-sources][Interesting Flutter sources]]
-    - [[#android-sources][Android Sources]]
-      - [[#android-design-toolkit][Android Design Toolkit]]
-    - [[#windows][Windows]]
-      - [[#windows-design-toolkit][Windows Design Toolkit]]
-    - [[#linux-sources][Linux Sources]]
-      - [[#packaging-apps][Packaging Apps]]
   - [[#other-sources][Other sources]]
 - [[#kubernetes][Kubernetes]]
   - [[#podman][Podman]]
-    - [[#getting-setup-in-fedora][Getting setup in Fedora]]
-      - [[#installing-guis][Installing GUIs]]
-        - [[#install-the-podman-desktop][Install the Podman desktop]]
-        - [[#podman-tui][Podman TUI]]
-        - [[#installing-pods][Installing Pods]]
-      - [[#probably-still-want-some-docker][Probably still want some docker?]]
-      - [[#documentation-and-sites][Documentation and sites]]
-    - [[#working-with-vscode][Working with VSCode]]
-      - [[#setup-for-remote][Setup for remote]]
-      - [[#troubleshooting][Troubleshooting]]
 - [[#software][Software]]
   - [[#emacs-and-org-mode][Emacs and org mode]]
-    - [[#web-sources][Web Sources]]
-    - [[#tricks-and-sips][Tricks and Sips]]
-  - [[#onlyoffice-in-podman][Onlyoffice in Podman]]
-    - [[#pulling-the-repo][Pulling the repo]]
-    - [[#using-buildah-to-build-the-image][Using Buildah to build the image]]
-    - [[#running-the-onlyoffice-docs-container-from-a-local-directory-without-root-permissions][Running the ONLYOFFICE Docs container from a local directory without root permissions]]
   - [[#hibernation-setup][Hibernation Setup]]
-    - [[#opensuse][OpenSuse]]
 
 * Languages
 ** Flutter
@@ -139,27 +116,6 @@ Do try [[https:blog.lifeishao.com/2021/12/30/replacing-docker-with-podman-for-yo
 + The ~:toc:~ tag can create a table of contents automatically. Just needs to be at the top.
 + Use the ~#+startup: show2levels~ to collapse the headers by default, goes from all to 1
 + The ~org-superstar-mode~ controls the beautification of the orgmode heading bullets
-** Onlyoffice in Podman
-- The current smooth run is with the ~7.2.0~ version of the Desktop edition on ~Hyprland~
-*** Pulling the repo
-#+begin_src bash
-git clone https://github.com/ONLYOFFICE/Docker-DocumentServer.git
-cd Docker-DocumentServer/
-#+end_src
-*** Using Buildah to build the image
-#+begin_src bash
-sudo dnf install buildah
-buildah bud --tag onlyofficeds:buildah -f ./Dockerfile
-#+end_src
-*** Running the ONLYOFFICE Docs container from a local directory without root permissions
-After building the ONLYOFFICE Docs image with Buildah as described above, run the ONLYOFFICE Docs container using the following command:
-#+begin_src bash
-podman run -i -t -d -p 8003:80 -p 4430:443 --restart=always \
- -v /app/onlyoffice/DocumentServer/logs:/var/log/onlyoffice:Z  \
- -v /app/onlyoffice/DocumentServer/data:/var/www/onlyoffice/Data:Z  \
- -v /app/onlyoffice/DocumentServer/lib:/var/lib/onlyoffice:Z \
- -v /app/onlyoffice/DocumentServer/db:/var/lib/postgresql:Z localhost/onlyofficeds:buildah
-#+end_src
 ** Hibernation Setup
 *** OpenSuse
 - [[https:suse.com/support/kb/doc/?id=000020287][According to Suse]]
