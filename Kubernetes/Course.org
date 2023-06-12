@@ -1,7 +1,7 @@
 #+title: Kuberetes and Cloud native essentials
 #+date: <2023-06-07 Wed>
 #+duedate: <2023-06-30 Fri>
-#+STARTUP: inlineimages
+#+STARTUP: inlineimages visual-line-mode
 
 * Table Of Contents :toc:
 - [[#cloud-native-architecture-fundamentals][Cloud Native Architecture Fundamentals]]
@@ -19,7 +19,6 @@
   - [[#container-basics][Container Basics]]
   - [[#running-containers][Running Containers]]
   - [[#building-container-images][Building Container Images]]
-  - [[#demo-building-container-images][Demo: Building Container Images]]
   - [[#security][Security]]
   - [[#container-orchestration-fundamentals][Container Orchestration Fundamentals]]
   - [[#networking][Networking]]
@@ -213,10 +212,17 @@ While a VM emulates a whole machine, including the OS and kernel. The containers
 Docker has become synonumous with building and running containers, but they merely stitched together existing tech in a smart way to make containers user friendly.
 In many cases youre using both tech to benifit from the efficency of containers and the security advantages of isolated VMs
 ** Running Containers
-
+Docker is not necessary to run industry standard containers, one can just follow the OCI [[https:github.com/opencontainers/runtime-spec][runtime-spec]] standard. The OCI initiative also maintains a container runtime reference implementation called [[https:github.com/opencontainers/runc][runC]], which is a low level runtime used in a variety of tools to start containers, including docker.
+In OOPs terms, thn relationship between container image and runtime container is like that of a class and the instantiation of said class.
+THe runtime and image spec go hand in hand, which describe how to unpack a container image and then manage them complete container lifestyle, from creating the env to starting the process, stopping and deleting it.
+In local machines, there are plenty of alternatives, some like [[https:buildah.io/][buildah]] and [[https:github.com/GoogleContainerTools/kaniko][kaniko]], for building images, and full alternatives to docker like [[https:podman.io/][podman]]. Podman is better as it provides similar API as docker, and additional features like running containers without root. Plus Pods.
 *** Demo: Running Containers
+1. Install docker or podman
+2. Setup an ngnix container
+3. Start, list and stop the container
 ** Building Container Images
-** Demo: Building Container Images
+
+*** Demo: Building Container Images
 ** Security
 ** Container Orchestration Fundamentals
 ** Networking
