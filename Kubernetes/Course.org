@@ -19,7 +19,6 @@
   - [[#container-basics][Container Basics]]
   - [[#running-containers][Running Containers]]
   - [[#building-container-images][Building Container Images]]
-  - [[#building-container-images-1][Building Container Images]]
   - [[#security][Security]]
   - [[#container-orchestration-fundamentals][Container Orchestration Fundamentals]]
   - [[#networking][Networking]]
@@ -35,7 +34,7 @@ With the rise of cloud computing, the requirements and possibilities for develop
   - Benifits of autoscaling and serverless
   - Open standards
 ** Fundamentals
-[[mono_v_micro.png]]
+[[pics/mono_v_micro.png]]
 At the core, the idea of cloud native architecture is to optimize your software for cost efficiency, reliability and faster time-to-market by using a combination of cultural, technological and architectural design patterns.
 It can provide solutions for the increasing complexity of applications and the growing demand by users. The basic idea is to break down your application in smaller pieces which makes them more manageable.
 Instead of providing all functionality in a single application, you have multiple decoupled applications that communicate with each other in a network. The independent applications are what are reffered to as microservices.
@@ -60,7 +59,7 @@ Environments are shared between multiple customers or teams, calling for a secur
 Systems used to be divided in zones that denied access from different networks or team. Once inside you could access every system inside.
 [[https:en.wikipedia.org/wiki/Zero_trust_security_model][Zero trust computing]] mitigates that by requiring authentication from every user and process.
 ** Autoscaling
-[[horiz_vs_vert.png]]
+[[pics/horiz_vs_vert.png]]
 
 It describes the dynamic adjustment of resources based on the current demand. Imagine that you have to carry a heavy object that you cannot pick up. You can build muscle to carry it yourself, but your body has an upper limit of strength. That's vertical scaling. You can also call your friends and ask them to help you and share the work. That's horizontal scaling.
 The two scaling methods are as follows.
@@ -196,7 +195,7 @@ To get effficient use out of the server hardware, VMs can be used to emulate a f
 Now, containers exist, and can solve it all, while being more efficient.
 ** Container Basics
 *** Pre Containers
-[[chroot.png]]
+[[pics/chroot.png]]
 Before containerization there was ~chroot~, which could be used to isolate a process from the root file system and "hide" the files from the process and simulade a new root dir.
 To isolate a process even more than chroot can do, current Linux kernels provide features like namespaces and cgroups. Namespaces can be used to isolate various resources, like a network namespace can  provide a complete abstraction of network interfaces and routing tables. Currently, there are 8 namespaces:
 + ~id~ - process ID, provides a process with its own set of process IDs (sub processes).
@@ -208,7 +207,7 @@ To isolate a process even more than chroot can do, current Linux kernels provide
 + ~cgroup~ - Allows a process to have its own set of cgroup root directories. When you want to limit your application container to let’s say 4GB of memory, cgroups are used under the hood to ensure these limits.
 + ~time~ - Virtualizethe newest namespace can be used to virtualize the clock of the system.
 *** Containers and the difference
-[[Trad_v_Virt_v_Contain.png]]
+[[pics/Trad_v_Virt_v_Contain.png]]
 While a VM emulates a whole machine, including the OS and kernel. The containers merely share the kernel of the host machine and, are only isolated processes. A VM comes with overhead, like boot time, size, or resource usage. While a container is quite literally a process, like a local app, making is much faster and smaller.
 Docker has become synonumous with building and running containers, but they merely stitched together existing tech in a smart way to make containers user friendly.
 In many cases youre using both tech to benifit from the efficency of containers and the security advantages of isolated VMs
@@ -217,12 +216,6 @@ Docker is not necessary to run industry standard containers, one can just follow
 In OOPs terms, thn relationship between container image and runtime container is like that of a class and the instantiation of said class.
 THe runtime and image spec go hand in hand, which describe how to unpack a container image and then manage them complete container lifestyle, from creating the env to starting the process, stopping and deleting it.
 In local machines, there are plenty of alternatives, some like [[https:buildah.io/][buildah]] and [[https:github.com/GoogleContainerTools/kaniko][kaniko]], for building images, and full alternatives to docker like [[https:podman.io/][podman]]. Podman is better as it provides similar API as docker, and additional features like running containers without root. Plus Pods.
-*** Demo: Running Containers
-1. Install docker or podman
-2. Setup an ngnix container
-3. Start, list and stop the container
-** Building Container Images
-Theyre called containers as a metaphor aiming at shipping docker, and additional features like running containers without root. Plus Pods.
 *** Demo: Running Containers
 1. Install docker or podman
 2. Setup an ngnix container
@@ -238,7 +231,7 @@ Theyre called containers as a metaphor aiming at shipping containers that are st
     #+begin_verse
     Docker container image is a lightweight, standalone, executable package of software that includes everything needed to run an application: code, runtime, system tools, system libraries and settings.
     #+end_verse
-  [[oci_spec.png]]
+  [[pics/oci_spec.png]]
   The image format made popular by docker was donated to the OCI initiative and is now known as [[https:github.com/opencontainers/image-spec][OCI Image Spec]]. The images consist of a filesystem bundle and metadata.
 + Container Images
   Images can be built by reading the instructions from a buildfile called a /dockerfile/.
@@ -278,6 +271,7 @@ Theyre called containers as a metaphor aiming at shipping containers that are st
      #+end_src
   3. 
 *** Demo: Building Container Images
++ Pull out the docker sample
 ** Security
 ** Container Orchestration Fundamentals
 ** Networking
