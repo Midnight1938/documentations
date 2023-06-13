@@ -1,3 +1,0 @@
-[submodule "Kubernetes/apps"]
-	path = Kubernetes/apps
-	url = https://github.com/docker/getting-started.git

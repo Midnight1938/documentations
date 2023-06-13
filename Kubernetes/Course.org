@@ -271,7 +271,10 @@ Theyre called containers as a metaphor aiming at shipping containers that are st
      #+end_src
   3. 
 *** Demo: Building Container Images
-+ Pull out the docker sample
++ Pull out the docker sample repo like so
+  #+begin_src bash
+    git clone https://github.com/docker/getting-started.git
+  #+end_src
 ** Security
 ** Container Orchestration Fundamentals
 ** Networking
