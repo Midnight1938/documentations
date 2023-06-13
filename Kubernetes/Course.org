@@ -19,6 +19,7 @@
   - [[#container-basics][Container Basics]]
   - [[#running-containers][Running Containers]]
   - [[#building-container-images][Building Container Images]]
+  - [[#building-container-images-1][Building Container Images]]
   - [[#security][Security]]
   - [[#container-orchestration-fundamentals][Container Orchestration Fundamentals]]
   - [[#networking][Networking]]
@@ -221,7 +222,61 @@ In local machines, there are plenty of alternatives, some like [[https:buildah.i
 2. Setup an ngnix container
 3. Start, list and stop the container
 ** Building Container Images
+Theyre called containers as a metaphor aiming at shipping docker, and additional features like running containers without root. Plus Pods.
+*** Demo: Running Containers
+1. Install docker or podman
+2. Setup an ngnix container
+3. Start, list and stop the container
+** Building Container Images
+Theyre called containers as a metaphor aiming at shipping containers that are standardized according to [[https:en.wikipedia.org/wiki/ISO_668][ISO 668]]. That format makes it easy to stack the containers on a ship, easy to unload with a crane and into a truck, regardless of its contents.
 
++ What did docker do?
+  Docker reused all components to isolate processes like namespace and cgroups, but a crutial piece that helped containers reach their breakthrough was container images.
+  - Container Images?
+    They are what makes these containers portable and easy to reuse on a variety of systems.
+    Docker calls it:
+    #+begin_verse
+    Docker container image is a lightweight, standalone, executable package of software that includes everything needed to run an application: code, runtime, system tools, system libraries and settings.
+    #+end_verse
+  [[oci_spec.png]]
+  The image format made popular by docker was donated to the OCI initiative and is now known as [[https:github.com/opencontainers/image-spec][OCI Image Spec]]. The images consist of a filesystem bundle and metadata.
++ Container Images
+  Images can be built by reading the instructions from a buildfile called a /dockerfile/.
+  1. The instructions are almost the same as one would use to install an application on a server, an example is:
+    #+BEGIN_SRC dockerfile
+      # Every container image starts with a base image.
+      # This could be your favorite linux distribution
+      FROM ubuntu:20.04 
+
+      # Run commands to add software and libraries to your image
+      # Here we install python3 and the pip package manager
+      RUN apt-get update && \
+          apt-get -y install python3 python3-pip 
+
+      # The copy command can be used to copy your code to the image
+      # Here we copy a script called "my-app.py" to the containers filesystem
+      COPY my-app.py /app/ 
+
+      # Defines the workdir in which the application runs
+      # From this point on everything will be executed in /app
+      WORKDIR /app
+
+      # The process that should be started when the container runs
+      # In this case we start our python app "my-app.py"
+      CMD ["python3","my-app.py"]
+    #+END_SRC
+  2. Then proceed to build the image
+     #+BEGIN_SRC bash
+       podman build -t my-py-img -f dockerfile # or docker
+     #+END_SRC
+     the ~-t~ implies the name tag for the image and ~-f~ the location of the dockerfile. Giving the developers the ability to manage all dependencies of their app on top of packaging it, ready to run. Instead of leaving it to someone else.
+  3. Pushing to registry
+     You can then distribute your image using a container registry, which is a web server which can store and share images. Podman does have push and pull (so does docker):
+     #+begin_src bash
+       podman push my-registry.com/my-python-image
+       podman pull my-registry.com/my-python-image
+     #+end_src
+  3. 
 *** Demo: Building Container Images
 ** Security
 ** Container Orchestration Fundamentals
