@@ -234,7 +234,7 @@ Theyre called containers as a metaphor aiming at shipping containers that are st
   [[pics/oci_spec.png]]
   The image format made popular by docker was donated to the OCI initiative and is now known as [[https:github.com/opencontainers/image-spec][OCI Image Spec]]. The images consist of a filesystem bundle and metadata.
 + Container Images
-  Images can be built by reading the instructions from a buildfile called a /dockerfile/.
+  Images can be built by reading the instructions from a buildfile called a /Dockerfile/.
   1. The instructions are almost the same as one would use to install an application on a server, an example is:
     #+BEGIN_SRC dockerfile
       # Every container image starts with a base image.
@@ -260,9 +260,9 @@ Theyre called containers as a metaphor aiming at shipping containers that are st
     #+END_SRC
   2. Then proceed to build the image
      #+BEGIN_SRC bash
-       podman build -t my-py-img -f dockerfile # or docker
+       podman build -t my-py-img -f Dockerfile # or docker
      #+END_SRC
-     the ~-t~ implies the name tag for the image and ~-f~ the location of the dockerfile. Giving the developers the ability to manage all dependencies of their app on top of packaging it, ready to run. Instead of leaving it to someone else.
+     the ~-t~ implies the name tag for the image and ~-f~ the location of the Dockerfile. Giving the developers the ability to manage all dependencies of their app on top of packaging it, ready to run. Instead of leaving it to someone else.
   3. Pushing to registry
      You can then distribute your image using a container registry, which is a web server which can store and share images. Podman does have push and pull (so does docker):
      #+begin_src bash
@@ -275,6 +275,22 @@ Theyre called containers as a metaphor aiming at shipping containers that are st
   #+begin_src bash
     git clone https://github.com/docker/getting-started.git
   #+end_src
++ Create a Dockerfile with the following contents:
+  #+begin_src dockerfile
+    # syntax=docker/dockerfile:1
+    FROM node:18-alpine
+    WORKDIR /app # Set working directory
+    COPY . . # Copy current to remote current
+    RUN yarn install --production # What to run at initiation
+    CMD ["node", "src/index.js"] # Default process started at podman run
+    EXPOSE 3000 # Set exposed port (can also do '--publish 3000:3000' nameOapp)
+  #+end_src
++ Then simply build the container:
+  #+begin_src bash
+    podman build -t nameOapp
+    podman run --detach --publish 3000:3000 nameOapp
+  #+end_src
+  then check container with ~podman ps~  and rename, stop, start as necessary
 ** Security
 ** Container Orchestration Fundamentals
 ** Networking
