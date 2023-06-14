@@ -269,7 +269,6 @@ Theyre called containers as a metaphor aiming at shipping containers that are st
        podman push my-registry.com/my-python-image
        podman pull my-registry.com/my-python-image
      #+end_src
-  3. 
 *** Demo: Building Container Images
 + Pull out the docker sample repo like so
   #+begin_src bash
@@ -292,7 +291,31 @@ Theyre called containers as a metaphor aiming at shipping containers that are st
   #+end_src
   then check container with ~podman ps~  and rename, stop, start as necessary
 ** Security
+Its essential to understand that containers have different sec-req from VMs. And while a lot of people rely on the isolation property of containers for security, its not always enough. The containers started on a machine share the same kernel, which is an attack vector in the system, if the containers are allowed to call kernel functions like killing a process, or modifying the host network by creating routing rules. More about kernel properties are available in the [[https:docs.docker.com/engine/security/#linux-kernel-capabilities][documentation]].
+[[pics/securtea.png]]
+One of the greatest seciurity risks, not only in containers, is an execution of processes with too many priviliges, especially starting ones like root and administrators. This was ignored in the past, and now many containers run as root.
+A fairly new vector is the use of public images. The two most popular registries are [[https:hub.docker.com/][docker hub]] and [[https:quay.io/][Quay]], while great, they may contain images that were modified with malicious code.
+Security in general can only be achieved at the container layer, and is a continuous process that needs to be adapted all the time.
+*** Reference:
++ [[https:sysdig.com/blog/dockerfile-best-practices/][Sysdig's article]]
++ 4Cs of Cloud Native Security from[[https:kubernetes.io/docs/concepts/security/overview/][ kubernetes]]
 ** Container Orchestration Fundamentals
+Its pretty easy to run a some containers on your local machine or server. But the way containers are actually used is a whole other story. The high efficiency of the concept has resulted in applcations and services becoming smaller and smaller, and soon your have modern applications that consist of a lot of containers.
+Having small, loosely coupled, isolated and independent is the basis for the so called microservice architectures. These containers are self contained small parts of business logic that are a part of the bigger problem.
+*** Problems, so many
+If you have to manage and deploy large number of containers, you get to a point where a system is needed to help with their management. Some problems include:
++ Providing compute resources like VMs where containers can run on
++ Schedule containers to servers efficiently
++ Allocate resources like CPU and memory to containers
++ Manage the availability of containers and replace in case of failure
++ Scale containers at load increase
++ Provide networking to connect them together
++ Provision storage if containers need to persist data
+
+Container orchestration systems provide a way to build a cluster of multiple servers and host the containers on top. Most container orchestration systems consist of two parts:
+- A control plane that is responsible for the management of the containers
+- Worker nodes that actually host the containers.
+Over the years, there have been several systems that can be used for orchestration, but most are no longer of great importance today and the industry has chosen Kubernetes as the standard system.
 ** Networking
 ** Service Discovery & DNS
 ** Service Mesh
