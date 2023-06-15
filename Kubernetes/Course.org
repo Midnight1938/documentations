@@ -317,7 +317,62 @@ Container orchestration systems provide a way to build a cluster of multiple ser
 - Worker nodes that actually host the containers.
 Over the years, there have been several systems that can be used for orchestration, but most are no longer of great importance today and the industry has chosen Kubernetes as the standard system.
 ** Networking
+The networking architecture depends heavily on network communication because unlike in monolithic form, a microservice implements an interface that can be called to make a request. Such as a service that responds with a list of products in an e-commerce application.
+The network namespace allows each container to have its own unique IP address, allowing multiple apps to function on the same network, like 8080. But to make the app accessible from outside the host system. And to allow communication between containers across hosts, we can use an overlay network which puts them on a virtual network that spans across host systems.
+That makes it easy to manage container communications with each other while sys admins don’t have to configure complex networking and routing between hosts and containers.
+Most networks also take care of IP management, which would be a lot of work to implement manually. The overlay network manages which container gets which IP and how the traffic flows to access single containers.
+[[pics/Routing.png]]
+Most modern implementations are based on the[[https:github.com/containernetworking/cni][ Container Network Interface (CNI)]]. Its now a standard that can be used to write or configure network plugins, making it easy to swap plugins in various orchestration platforms.
 ** Service Discovery & DNS
+For a /while/, server management in traditional data centers, was managable. Many sys admins even remembered all IP addesses of important systems. Large lists of server, host names, IP addresses, and pusposes were all maintained manually.
+But in orchestaration, things get a little complicated.
++ Hundreds, even thousands of containers have individual ip addesses
++ Containers are deployed on a variety of hosts, in different data centers or even geolocations.
++ The containers or Services need DNS to communicate, using IP addresses is nearly impossible.
++ Information about the containers must also be removed when they are deleted.
+The simeple solution is automation. All the info is put into a /service registry/. Finding other services in the network and requesting information is called /Service discovery/.
+*** Approaching Service discovery
++ DNS
+  Modern DNS servers that have a service API can be used to register new services as theyre created. Its pretty straight forward and most organizations have servers that can do so.
++ Key Value Store
+  Using consistent datastore especially to store information about services. Many systems are able to operate with strong fallover mechanisms. Popular choices, especially for clustering are [[https:github.com/coreos/etcd/][etcd]], [[https:consul.io/][Consui]] or [[https:zookeeper.apache.org/][Apache Zookeeper]]. 
 ** Service Mesh
+Networking is a crucial part of microservices and containers, and it can get quite complex for devs and admins alike. In addition, a lot of functionality such as monitoring, access control of the networking traffic is desired when containers communicate with each other.
+Instead of implementing all that we can just start a second container that has this functionality implemented, the software that lets you do that is called a proxy. It sits between a client and server and can modify or filter network traffic before it reaches the server. Popular representatives are [[https:nginx.com/][ngnix]], [[https:haproxy.org/][haproxy]], or [[https:envoyproxy.io/][envoy]]
+A service mesh takes it a step further and adds a proxy server to every container that you have in the architecture. Example from istio.io:
+[[pics/service_mesh.png]]
+You can then just use the proxies to handle network communication between services.
++ For example in encryption, if two or more applications should encrypt their traffic when they talk to each other, it'd require adding libraries and configs and management of digital certificates that prove the identity of the involved applications. That can be a lot of work and error prone.
++ When service mesh is used, instead of the applications talking directly, they have their traffic routed through proxies instead. Most popular are [[https:istio.io/][istio]] and [[https:linkerd.io/][linkerd]].
+  - The proxies form a /data plane/. Where networking rules and traffic flow are implemented and shaped.
+  - The rules get managed by /control plane/ of the service mesh. Where one can define how traffic flows from service A to B, and what config is applied to proxies.
+So in conclusion its preffered to write config files for the service mesh to encrypt A and B communication, instead of writing code and installing libraries. The config can then be uploaded to the control panel and distributed to the data plane to enforce the rules.
+The [[https:smi-spec.io/][Service Mesh Interface (SMI)]] project aims at defining a specification on how a service mesh from different providers can be implemented. Taking it from a basic idea of how traffic in container platforms could be handled with proxies. Its also in its way to be standardized, current [[https:github.com/servicemeshinterface/smi-spec][spec]] in git
 ** Storage
+
 ** Additional Resources
++ The History of Containers
+	- [[https:blog.aquasec.com/a-brief-history-of-containers-from-1970s-chroot-to-docker-2016][A Brief History of Containers: From the 1970s Till Now]], by Rani Osnat (2020)
+	- [[https:web.archive.org/web/20160426102954/https://blog.docker.com/2014/06/its-here-docker-1-0/][It's Here: Docker 1.0]], by Julien Barbier (2014)
++ Chroot
+	- [[https:wiki.ubuntuusers.de/chroot/][chroot]]
++ Container Performance
+	- [[https:brendangregg.com/blog/2017-05-15/container-performance-analysis-dockercon-2017.html][Container Performance Analysis at DockerCon 2017]], by Brendan Gregg
++ Best Practices on How to Build Container Images
+	- [[https:sysdig.com/blog/dockerfile-best-practices/][Top 20 Dockerfile Best Practices]], by Álvaro Iradier (2021)
+	- [[https:learnk8s.io/blog/smaller-docker-images][3 simple tricks for smaller Docker images]], by Daniele Polencic (2019)
+	- [[https:cloud.google.com/architecture/best-practices-for-building-containers][Best practices for building containers]]
++ Alternatives to Classic Dockerfile Container Building
+	- [[https:trainingportal.linuxfoundation.org/learn/course/kubernetes-and-cloud-native-essentials-lfs250/container-orchestration/%C3%81l][Buildpacks vs Jib vs Dockerfile: Comparing containerization methods]], by James Ward (2020)
++ Service Discovery
+	- [[https:nginx.com/blog/service-discovery-in-a-microservices-architecture/][Service Discovery in a Microservices Architecture]], by Chris Richardson (2015)
++ Container Networking
+	- [[https:inovex.de/de/blog/kubernetes-networking-part-1-en/][Kubernetes Networking Part 1: Networking Essentials]], By Simon Kurth (2021)
+	- [[https:youtube.com/watch?v=0Omvgd7Hg1I][Life of a Packet (I)]], by Michael Rubin (2017)
+	- [[https:iximiuz.com/en/posts/computer-networking-101/][Computer Networking Introduction - Ethernet and IP (Heavily Illustrated)]], by Ivan Velichko (2021)
++ Container Storage
+	- [[https:thenewstack.io/methods-dealing-container-storage/][Managing Persistence for Docker Containers]], by Janakiram MSV (2016)
++ Container and Kubernetes Security
+	- [[https:microsoft.com/security/blog/2021/03/23/secure-containerized-environments-with-updated-threat-matrix-for-kubernetes/][Secure containerized environments with updated thread matrix for Kubernetes]], by Yossi Weizman (2021)
++ Docker Container Playground
+	- [[https:labs.play-with-docker.com/][Play with Docker]]
