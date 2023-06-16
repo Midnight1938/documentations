@@ -516,25 +516,30 @@ This is an example block.
 
 ** BEGIN/END_SRC blocks:
 #+BEGIN_SRC python
-print("Hello, world!")
+  print("Hello, world!")
+  print("Hello, world!")
 #+END_SRC
 
 ** BEGIN/END_COMMENT blocks:
 #+BEGIN_COMMENT
+This is a comment block.
 This is a comment block.
 #+END_COMMENT
 
 ** BEGIN/END_QUOTE blocks:
 #+BEGIN_QUOTE
 This is a quoted text.
+This is a quoted text.
 #+END_QUOTE
 
 ** BEGIN/END_EXAMPLE blocks:
 #+BEGIN_EXAMPLE
 This is an example.
+This is an example.
 #+END_EXAMPLE
 
 ** BEGIN/END_CENTER blocks:
 #+BEGIN_CENTER
+This text is centered.
 This text is centered.
 #+END_CENTER
