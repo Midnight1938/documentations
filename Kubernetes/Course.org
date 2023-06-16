@@ -512,6 +512,7 @@ The kubernetes API allows communication with clusters, every user and every comp
 ** BEGIN/END blocks:
 #+BEGIN_EXAMPLE
 This is an example block.
+This is an example block.
 #+END_EXAMPLE
 
 ** BEGIN/END_SRC blocks:
