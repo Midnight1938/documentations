@@ -26,6 +26,15 @@
   - [[#service-mesh][Service Mesh]]
   - [[#storage][Storage]]
   - [[#additional-resources-1][Additional Resources]]
+- [[#kubernetes-fundamentals][Kubernetes Fundamentals]]
+  - [[#fundamentals-1][Fundamentals]]
+  - [[#kubernetes-setup][Kubernetes Setup]]
+  - [[#demo-kubernetes-setup][Demo: Kubernetes Setup]]
+  - [[#kubernetes-api][Kubernetes API]]
+  - [[#running-containers-on-kubernetes][Running Containers on Kubernetes]]
+  - [[#networking-1][Networking]]
+  - [[#scheduling][Scheduling]]
+  - [[#additional-resources-2][Additional Resources]]
 
 * Cloud Native Architecture Fundamentals
 With the rise of cloud computing, the requirements and possibilities for developing, deploying and designing applications have changed significantly.
@@ -385,3 +394,68 @@ In order to keep up with the unbroken growth of various storage implementations,
 	- [[https:microsoft.com/security/blog/2021/03/23/secure-containerized-environments-with-updated-threat-matrix-for-kubernetes/][Secure containerized environments with updated thread matrix for Kubernetes]], by Yossi Weizman (2021)
 + Docker Container Playground
 	- [[https:labs.play-with-docker.com/][Play with Docker]]
+* Kubernetes Fundamentals
+Originally designed and developed by Google, Kubernetes got open-sourced in 2014, and along the release v1.0 Kubernetes was donated to the newly formed Cloud Native Computing Foundation as the very first project.
+A lot of cloud native technologies evolve around Kubernetes, be it low-level tools like container runtimes, monitoring or application delivery tools.
+** Fundamentals
+Kubernetes are often used as a cluster, meaning it spans across multiple servers that work on different tasks and distribute load of a system. This design was based on the requirements at google, where hundreds of containers are started every hour. The high horizontal scalability of kubernetes allows us to have thousands of server nodes across multiple data centers.
+Kubernetes consists of two main types of server nodes:
++ Control Plane Nodes
+  Thats the brain of the operation. It contains components which manage the cluster and control of various tasks, such as deployment, scheduling and self healing.
++ Worker Nodes
+  This is where the applications run in the cluster. Thats it, thats the only job they have. The container initiation and running is managed by the control plane nodes.
+[[file:pics/Kuber_arch.png]]
+*** Kubernetes architecture
+Similar to a microservice architecture, where youd pick containers for your applications. Kubernetes incorporates smaller services that need to be installed on the nodes.
+Kubernetes also has a concept of namespaces, which are not to be confused with kernel namespaces that are used to isolate containers.
+A Kubernetes namespace can be used to divide a cluster into multiple virtual clusters, which can be used for multi-tenancy when multiple teams share a cluster. Do note that Kubernetes namespaces are not suitable for strong isolation and should more be viewed like a directory on a computer where you can organize objects and manage which user has access to which folder.
+**** Control Plane node types
++ kube-apiserver
+  The centerpiece of kubernetes where components interact with the api-server and users access clusters.
++ etcd
+  A database that holds the state of clusters. Though it is not officially a part of the kubernetes architecture.
++ kube-scheduler
+  When a new workload is scheduled, the scheduler is able to choose a worker node that fits based on system requirements (CPU n RAM).
++ kube-controller-manager
+  It contains non terminating control loops that manage the state of your cluster. For example a loop that makes sure that a desired number of apps are available at all times.
++ cloud-controller-manager (optional sys)
+  Can be used to interact with the API of cloud providers, to create external resources like load balancers, storage or security groups.
+**** Components of worker nodes
++ container runtime
+  Its responsible for running containers on worker nodes. Docker used to be the most popluar choice but is now being replaced by [[https:containerd.io/][containerd]].
++ kubelet
+  A small agent that runs on every container in the worker node to communicate with the api server and the container runtime to handle final stage of starting containers.
++ kube-proxy
+  A network proxy that relies on the networking capabilities of underlying OS (when possible) to handle inside and outside communication of a cluster
+
+** Kubernetes Setup
+Setting up a Kubernetes cluster can be achieved with a lot of different methods. Creating a test "cluster" can be very easy with the right tools:
++ [[https:minikube.sigs.k8s.io/docs/][Minikube]]
++ [[https:kind.sigs.k8s.io/][kind]]
++ [[https:microk8s.io/][MicroK8s]]
+
+If you want to set up a production-grade cluster on your own hardware or virtual machines, you can choose one of the various installers:
++ [[https:kubernetes.io/docs/reference/setup-tools/kubeadm/][kubeadm]]
++ [[https:github.com/kubernetes/kops][kops]]
++ [[https:github.com/kubernetes-sigs/kubespray][kubespray]]
+
+A few vendors started packaging Kubernetes into a distribution and even offer commercial support:
++ [[https:rancher.com/][Rancher]]
++ [[https:k3s.io/][k3s]]
++ [[https:redhat.com/en/technologies/cloud-computing/openshift][OpenShift]]
++ [[https:tanzu.vmware.com/tanzu][VMWare Tanzu]]
+The distributions often choose an opinionated approach and offer additional tools while using Kubernetes as the central piece of their framework.
+
+If you don’t want to install and manage it yourself, you can consume it from a cloud provider:
++ [[https:aws.amazon.com/eks/][Amazon (EKS)]]
++ [[https:cloud.google.com/kubernetes-engine][Google (GKE)]]
++ [[https:azure.microsoft.com/en-us/services/kubernetes-service][Microsoft (AKS)]]
++ [[https:digitalocean.com/products/kubernetes/][DigitalOcean (DOKS)]]
+
+You can learn how to set up your own Kubernetes cluster with Minikube in this [[https:kubernetes.io/docs/tutorials/kubernetes-basics/create-cluster/cluster-intro/][interactive tutorial]].
+** Demo: Kubernetes Setup
+** Kubernetes API
+** Running Containers on Kubernetes
+** Networking
+** Scheduling
+** Additional Resources
