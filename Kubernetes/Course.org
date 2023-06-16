@@ -495,8 +495,35 @@ Thats prettymuch it, look at actual documentation to make nodes
 The kubernetes API allows communication with clusters, every user and every component of the cluster itself needs the API server.
 *** Access Control
 [[file:pics/AccessControlOverview.png]]
-
+Before a requets is processed by Kubernetes, it goes through 3 stages.
++ Authentication
+  Requester must present an identity to authenticate against the api, which is commonly done through a digital signed cert ([[https:en.wikipedia.org/wiki/X.509][X.509]]) or an external identity management system.
+  The users are always externally managed, and [[https:kubernetes.io/docs/reference/access-authn-authz/service-accounts-admin/][Service Accounts]] can be used for authentication of tech users
++ Authorization
+  Kubernetes can decide what the requester is allowed to do using the [[https:kubernetes.io/docs/reference/access-authn-authz/rbac/][Role Based Access Control (RBAC)]]
++ Admission Control
+  Lastly, admission controllers can be ute dot modify or validate the request. Like if a user tries to use a container image from an untrustworthy registry, an admission controller could block it.
+  There are tools like the [[https:openpolicyagent.org/][Open Policy Agent]] to manage admission control externally
+Like most APIs the kubernetes API is implemented as a RESTful interface thats exposed over HTTPS. Through the API, a user or service can create, modify, delete or retrieve resources from within.
 ** Running Containers on Kubernetes
++ Hows running a container on your local machine differ from running it in kubernetes?
+  In kubernetes instead of starting containers directly, pods are defined as the smallest compute unit, and kubernetes translates that into a running container. Imagine Pods as a wrapper around a container.
+  When a pod object is created in kubernetes, several components are involved in that, and finally you get containers in a node.
+[[file:pics/Container_w_d.png]]
+In an effort to allow other container runtimes (than docker), kubernetes introduced the [[https:kubernetes.io/blog/2016/12/container-runtime-interface-cri-in-kubernetes/][Container Runtime Interface (CRI)]].
++ Runtimes
+  - [[https:containerd.io/][Containerd]]
+    A lightweight and performant implementation to run containers. Its quite popular, and is used by all major cloud providers for Kubernetes As a Service products
+  - [[https:cri-o.io/][CRI-O]]
+    A container orchestrator by RedHat thats closely related to podman and buildah
+  - Docker
+    The standard for a long time bu never meant for orchestration. Its usage has been deprecated and removed in Kubernetes 1.24. They do tell you [[https:kubernetes.io/blog/2020/12/02/dont-panic-kubernetes-and-docker/][why]]
+The ideas of Containerd and CRI-O was simple: provide a runtime that only contains the absolutely essentials to run containers.
+Nevertheless, they do have additional features, like the ability to integrate with container runtime sandboxing tools; that try to solve the security problems that come with sharing kernel between containers. Most common tools right now are:
++ [[https:github.com/google/gvisor][gvisor]]
+  By Google (sus), it provides an application kernel that sits between containerized processes and host kernel.
++ [[https:katacontainers.io/][Kata Containers]]
+  A secure runtime that provides a lightweight VM, that behaves like a container.
 ** Networking
 ** Scheduling
 ** Additional Resources
