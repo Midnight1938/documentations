@@ -34,7 +34,7 @@ With the rise of cloud computing, the requirements and possibilities for develop
   - Benifits of autoscaling and serverless
   - Open standards
 ** Fundamentals
-[[pics/mono_v_micro.png]]
+[[file:pics/mono_v_micro.png]]
 At the core, the idea of cloud native architecture is to optimize your software for cost efficiency, reliability and faster time-to-market by using a combination of cultural, technological and architectural design patterns.
 It can provide solutions for the increasing complexity of applications and the growing demand by users. The basic idea is to break down your application in smaller pieces which makes them more manageable.
 Instead of providing all functionality in a single application, you have multiple decoupled applications that communicate with each other in a network. The independent applications are what are reffered to as microservices.
@@ -59,7 +59,7 @@ Environments are shared between multiple customers or teams, calling for a secur
 Systems used to be divided in zones that denied access from different networks or team. Once inside you could access every system inside.
 [[https:en.wikipedia.org/wiki/Zero_trust_security_model][Zero trust computing]] mitigates that by requiring authentication from every user and process.
 ** Autoscaling
-[[pics/horiz_vs_vert.png]]
+[[file:pics/horiz_vs_vert.png]]
 
 It describes the dynamic adjustment of resources based on the current demand. Imagine that you have to carry a heavy object that you cannot pick up. You can build muscle to carry it yourself, but your body has an upper limit of strength. That's vertical scaling. You can also call your friends and ask them to help you and share the work. That's horizontal scaling.
 The two scaling methods are as follows.
@@ -195,7 +195,7 @@ To get effficient use out of the server hardware, VMs can be used to emulate a f
 Now, containers exist, and can solve it all, while being more efficient.
 ** Container Basics
 *** Pre Containers
-[[pics/chroot.png]]
+[[file:pics/chroot.png]]
 Before containerization there was ~chroot~, which could be used to isolate a process from the root file system and "hide" the files from the process and simulade a new root dir.
 To isolate a process even more than chroot can do, current Linux kernels provide features like namespaces and cgroups. Namespaces can be used to isolate various resources, like a network namespace can  provide a complete abstraction of network interfaces and routing tables. Currently, there are 8 namespaces:
 + ~id~ - process ID, provides a process with its own set of process IDs (sub processes).
@@ -207,7 +207,7 @@ To isolate a process even more than chroot can do, current Linux kernels provide
 + ~cgroup~ - Allows a process to have its own set of cgroup root directories. When you want to limit your application container to let’s say 4GB of memory, cgroups are used under the hood to ensure these limits.
 + ~time~ - Virtualizethe newest namespace can be used to virtualize the clock of the system.
 *** Containers and the difference
-[[pics/Trad_v_Virt_v_Contain.png]]
+[[file:pics/Trad_v_Virt_v_Contain.png]]
 While a VM emulates a whole machine, including the OS and kernel. The containers merely share the kernel of the host machine and, are only isolated processes. A VM comes with overhead, like boot time, size, or resource usage. While a container is quite literally a process, like a local app, making is much faster and smaller.
 Docker has become synonumous with building and running containers, but they merely stitched together existing tech in a smart way to make containers user friendly.
 In many cases youre using both tech to benifit from the efficency of containers and the security advantages of isolated VMs
@@ -231,7 +231,7 @@ Theyre called containers as a metaphor aiming at shipping containers that are st
     #+begin_verse
     Docker container image is a lightweight, standalone, executable package of software that includes everything needed to run an application: code, runtime, system tools, system libraries and settings.
     #+end_verse
-  [[pics/oci_spec.png]]
+  [[file:pics/oci_spec.png]]
   The image format made popular by docker was donated to the OCI initiative and is now known as [[https:github.com/opencontainers/image-spec][OCI Image Spec]]. The images consist of a filesystem bundle and metadata.
 + Container Images
   Images can be built by reading the instructions from a buildfile called a /Dockerfile/.
@@ -292,7 +292,7 @@ Theyre called containers as a metaphor aiming at shipping containers that are st
   then check container with ~podman ps~  and rename, stop, start as necessary
 ** Security
 Its essential to understand that containers have different sec-req from VMs. And while a lot of people rely on the isolation property of containers for security, its not always enough. The containers started on a machine share the same kernel, which is an attack vector in the system, if the containers are allowed to call kernel functions like killing a process, or modifying the host network by creating routing rules. More about kernel properties are available in the [[https:docs.docker.com/engine/security/#linux-kernel-capabilities][documentation]].
-[[pics/securtea.png]]
+[[file:pics/securtea.png]]
 One of the greatest seciurity risks, not only in containers, is an execution of processes with too many priviliges, especially starting ones like root and administrators. This was ignored in the past, and now many containers run as root.
 A fairly new vector is the use of public images. The two most popular registries are [[https:hub.docker.com/][docker hub]] and [[https:quay.io/][Quay]], while great, they may contain images that were modified with malicious code.
 Security in general can only be achieved at the container layer, and is a continuous process that needs to be adapted all the time.
@@ -321,7 +321,7 @@ The networking architecture depends heavily on network communication because unl
 The network namespace allows each container to have its own unique IP address, allowing multiple apps to function on the same network, like 8080. But to make the app accessible from outside the host system. And to allow communication between containers across hosts, we can use an overlay network which puts them on a virtual network that spans across host systems.
 That makes it easy to manage container communications with each other while sys admins don’t have to configure complex networking and routing between hosts and containers.
 Most networks also take care of IP management, which would be a lot of work to implement manually. The overlay network manages which container gets which IP and how the traffic flows to access single containers.
-[[pics/Routing.png]]
+[[file:pics/Routing.png]]
 Most modern implementations are based on the[[https:github.com/containernetworking/cni][ Container Network Interface (CNI)]]. Its now a standard that can be used to write or configure network plugins, making it easy to swap plugins in various orchestration platforms.
 ** Service Discovery & DNS
 For a /while/, server management in traditional data centers, was managable. Many sys admins even remembered all IP addesses of important systems. Large lists of server, host names, IP addresses, and pusposes were all maintained manually.
@@ -349,7 +349,16 @@ You can then just use the proxies to handle network communication between servic
 So in conclusion its preffered to write config files for the service mesh to encrypt A and B communication, instead of writing code and installing libraries. The config can then be uploaded to the control panel and distributed to the data plane to enforce the rules.
 The [[https:smi-spec.io/][Service Mesh Interface (SMI)]] project aims at defining a specification on how a service mesh from different providers can be implemented. Taking it from a basic idea of how traffic in container platforms could be handled with proxies. Its also in its way to be standardized, current [[https:github.com/servicemeshinterface/smi-spec][spec]] in git
 ** Storage
-
+[[file:pics/ContainerLayers.png]]
+From a storage perspective, containers do have a flaw, theyre epihemeral. The images are read only and just consist of layers added during the build phase. Ensuring the container spawned from the image has the same behaviour and functionality each time. A read write layer IS added atop the system at container launch, as many applicaitions require the permission to function.
+The problem arises when the container is stopped, and like memory, is erased and must be written to disk in order to persist data.
+[[file:pics/volume_data.png]]
+A volume can be used to persist data on the host machine. The idea is, instead of isolating the filesystem of a process, directories that reside on the host are passed on to the container filesystem. It does weaken the isolation as it effectively gives the container access to the host.
+*** Sharing between containers
+[[file:pics/kube_Storage.png]]
+Data often needs to be shared between multiple containers, on different host systems, or even when containers are migrated and need access to their original system.
+Orchestaration systems like kubernetes are able to help mitigate these problems, but do require a robust storage system attached to the servers. Allowing the storage to be provisioned by a central storage system which allows containers on different servers to share volume rw data.
+In order to keep up with the unbroken growth of various storage implementations, again, the solution was to implement a standard. The [[https:github.com/container-storage-interface/spec][Container Storage Interface (CSI)]] came up to offer a uniform interface which allows attaching different storage systems no matter if it’s cloud or on-premises storage.
 ** Additional Resources
 + The History of Containers
 	- [[https:blog.aquasec.com/a-brief-history-of-containers-from-1970s-chroot-to-docker-2016][A Brief History of Containers: From the 1970s Till Now]], by Rani Osnat (2020)
