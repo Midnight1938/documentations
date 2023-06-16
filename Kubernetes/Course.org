@@ -1,9 +1,10 @@
+
 #+title: Kuberetes and Cloud native essentials
 #+date: <2023-06-07 Wed>
 #+duedate: <2023-06-30 Fri>
 #+STARTUP: inlineimages visual-line-mode
 
-* Table Of Contents :toc:
+* Table Of Contents                                                     :toc:
 - [[#cloud-native-architecture-fundamentals][Cloud Native Architecture Fundamentals]]
   - [[#fundamentals][Fundamentals]]
   - [[#characteristics-of-cloud-native-architecture][Characteristics of Cloud Native Architecture]]
@@ -237,9 +238,9 @@ Theyre called containers as a metaphor aiming at shipping containers that are st
   - Container Images?
     They are what makes these containers portable and easy to reuse on a variety of systems.
     Docker calls it:
-    #+begin_verse
+    #+begin_quote
     Docker container image is a lightweight, standalone, executable package of software that includes everything needed to run an application: code, runtime, system tools, system libraries and settings.
-    #+end_verse
+    #+end_quote
   [[file:pics/oci_spec.png]]
   The image format made popular by docker was donated to the OCI initiative and is now known as [[https:github.com/opencontainers/image-spec][OCI Image Spec]]. The images consist of a filesystem bundle and metadata.
 + Container Images
@@ -454,7 +455,44 @@ If you don’t want to install and manage it yourself, you can consume it from a
 
 You can learn how to set up your own Kubernetes cluster with Minikube in this [[https:kubernetes.io/docs/tutorials/kubernetes-basics/create-cluster/cluster-intro/][interactive tutorial]].
 ** Demo: Kubernetes Setup
+The aim is to install a simple 2 node cluster using [[https:kubernetes.io/docs/setup/production-environment/tools/kubeadm/install-kubeadm/][kubeadm]]
+It requires us to disable swap, have port 6443 free and install containerd, none of which i will do. It gives us 3 main packages
+- kubeadm to bootstrap the cluster
+- kubelet runs on all systems in the cluster, it starts pods and containers and stuff
+- kubectl is the utility used to talk to clusters
+*** Using minikube
+Set ~minikube config set rootless true~ for podman, then install containerd
+Then trying ~minikube start --container-runtime containerd~ gets you:
+#+begin_quote
+😄  minikube v1.30.1 on Opensuse-Tumbleweed 
+    ▪ MINIKUBE_ROOTLESS=true
+✨  Automatically selected the podman driver
+📌  Using rootless Podman driver
+👍  Starting control plane node minikube in cluster minikube
+🚜  Pulling base image ...
+💾  Downloading Kubernetes v1.26.3 preload ...
+    > preloaded-images-k8s-v18-v1...:  428.27 MiB / 428.27 MiB  100.00% 11.02 M
+    > gcr.io/k8s-minikube/kicbase...:  373.53 MiB / 373.53 MiB  100.00% 3.44 Mi
+E0616 19:41:17.193581   11462 cache.go:188] Error downloading kic artifacts:  not yet implemented, see issue #8426
+🔥  Creating podman container (CPUs=2, Memory=2200MB) ...
+📦  Preparing Kubernetes v1.26.3 on containerd 1.6.20 ...
+    ▪ Generating certificates and keys ...
+    ▪ Booting up control plane ...
+    ▪ Configuring RBAC rules ...
+🔗  Configuring CNI (Container Networking Interface) ...
+    ▪ Using image gcr.io/k8s-minikube/storage-provisioner:v5
+🔎  Verifying Kubernetes components...
+🌟  Enabled addons: storage-provisioner, default-storageclass
+🏄  Done! kubectl is now configured to use "minikube" cluster and "default" namespace by default
+#+end_quote
++ Then =kubectl --help= finally works! (no kubeadm here, its minikube)
++ use =Calico= as an overlay network for the cluster with:
+  #+begin_src bash
+    minikube start --network-plugin=cni --cni=calico
+  #+end_src
+Thats prettymuch it, look at actual documentation to make nodes
 ** Kubernetes API
+The kubernetes API allows communication with clusters, every user and every component of the cluster itself needs the API server.
 ** Running Containers on Kubernetes
 ** Networking
 ** Scheduling
