@@ -4,7 +4,7 @@
 #+duedate: <2023-06-30 Fri>
 #+STARTUP: inlineimages visual-line-mode
 
-* Table Of Contents                                                     :toc:
+* Table Of Contents :toc:
 - [[#cloud-native-architecture-fundamentals][Cloud Native Architecture Fundamentals]]
   - [[#fundamentals][Fundamentals]]
   - [[#characteristics-of-cloud-native-architecture][Characteristics of Cloud Native Architecture]]
@@ -36,13 +36,6 @@
   - [[#networking-1][Networking]]
   - [[#scheduling][Scheduling]]
   - [[#additional-resources-2][Additional Resources]]
-- [[#test-blocks][Test blocks]]
-  - [[#beginend-blocks][BEGIN/END blocks:]]
-  - [[#beginend_src-blocks][BEGIN/END_SRC blocks:]]
-  - [[#beginend_comment-blocks][BEGIN/END_COMMENT blocks:]]
-  - [[#beginend_quote-blocks][BEGIN/END_QUOTE blocks:]]
-  - [[#beginend_example-blocks][BEGIN/END_EXAMPLE blocks:]]
-  - [[#beginend_center-blocks][BEGIN/END_CENTER blocks:]]
 
 * Cloud Native Architecture Fundamentals
 With the rise of cloud computing, the requirements and possibilities for developing, deploying and designing applications have changed significantly.
@@ -245,9 +238,9 @@ Theyre called containers as a metaphor aiming at shipping containers that are st
   - Container Images?
     They are what makes these containers portable and easy to reuse on a variety of systems.
     Docker calls it:
-    #+begin_quote
+    #+begin_example
     Docker container image is a lightweight, standalone, executable package of software that includes everything needed to run an application: code, runtime, system tools, system libraries and settings.
-    #+end_quote
+    #+end_example
   [[file:pics/oci_spec.png]]
   The image format made popular by docker was donated to the OCI initiative and is now known as [[https:github.com/opencontainers/image-spec][OCI Image Spec]]. The images consist of a filesystem bundle and metadata.
 + Container Images
@@ -470,7 +463,7 @@ It requires us to disable swap, have port 6443 free and install containerd, none
 *** Using minikube
 Set ~minikube config set rootless true~ for podman, then install containerd
 Then trying ~minikube start --container-runtime containerd~ gets you:
-#+begin_quote
+#+begin_example
 😄  minikube v1.30.1 on Opensuse-Tumbleweed 
     ▪ MINIKUBE_ROOTLESS=true
 ✨  Automatically selected the podman driver
@@ -491,7 +484,7 @@ E0616 19:41:17.193581   11462 cache.go:188] Error downloading kic artifacts:  no
 🔎  Verifying Kubernetes components...
 🌟  Enabled addons: storage-provisioner, default-storageclass
 🏄  Done! kubectl is now configured to use "minikube" cluster and "default" namespace by default
-#+end_quote
+#+end_example
 + Then =kubectl --help= finally works! (no kubeadm here, its minikube)
 + use =Calico= as an overlay network for the cluster with:
   #+begin_src bash
@@ -507,40 +500,3 @@ The kubernetes API allows communication with clusters, every user and every comp
 ** Networking
 ** Scheduling
 ** Additional Resources
-
-* Test blocks
-** BEGIN/END blocks:
-#+BEGIN_EXAMPLE
-This is an example block.
-This is an example block.
-#+END_EXAMPLE
-
-** BEGIN/END_SRC blocks:
-#+BEGIN_SRC python
-  print("Hello, world!")
-  print("Hello, world!")
-#+END_SRC
-
-** BEGIN/END_COMMENT blocks:
-#+BEGIN_COMMENT
-This is a comment block.
-This is a comment block.
-#+END_COMMENT
-
-** BEGIN/END_QUOTE blocks:
-#+BEGIN_QUOTE
-This is a quoted text.
-This is a quoted text.
-#+END_QUOTE
-
-** BEGIN/END_EXAMPLE blocks:
-#+BEGIN_EXAMPLE
-This is an example.
-This is an example.
-#+END_EXAMPLE
-
-** BEGIN/END_CENTER blocks:
-#+BEGIN_CENTER
-This text is centered.
-This text is centered.
-#+END_CENTER
