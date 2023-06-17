@@ -36,6 +36,23 @@
   - [[#networking-1][Networking]]
   - [[#scheduling][Scheduling]]
   - [[#additional-resources-2][Additional Resources]]
+- [[#working-with-kubernetes][Working with Kubernetes]]
+  - [[#kubernetes-objects][Kubernetes Objects]]
+  - [[#interacting-with-kubernetes][Interacting with Kubernetes]]
+  - [[#demo-kubectl][Demo: kubectl]]
+  - [[#pod-concept][Pod Concept]]
+  - [[#pod-lifecycle][Pod Lifecycle]]
+  - [[#demo-pods][Demo: Pods]]
+  - [[#workload-objects][Workload Objects]]
+  - [[#demo-workload-objects][Demo: Workload Objects]]
+  - [[#networking-objects][Networking Objects]]
+  - [[#demo-using-services][Demo: Using Services]]
+  - [[#volume--storage-objects][Volume & Storage Objects]]
+  - [[#configuration-objects][Configuration Objects]]
+  - [[#autoscaling-objects][Autoscaling Objects]]
+  - [[#scheduling-objects][Scheduling Objects]]
+  - [[#kubernetes-security][Kubernetes Security]]
+  - [[#additional-resources-3][Additional Resources]]
 
 * Cloud Native Architecture Fundamentals
 With the rise of cloud computing, the requirements and possibilities for developing, deploying and designing applications have changed significantly.
@@ -525,5 +542,110 @@ Nevertheless, they do have additional features, like the ability to integrate wi
 + [[https:katacontainers.io/][Kata Containers]]
   A secure runtime that provides a lightweight VM, that behaves like a container.
 ** Networking
+Networking kubernetes can be quite complicated, as seen in [[#container-orchestration][Container Orchestration]]. As we have to deal with a ton of containers wanting to communicate with eachother. Kubernetes distinguishes between 4 main types of networking issues:
++ Container-to-Container
+  A situation solved using Pods
++ Pod-to-Pod
+  Solved using an overlay network
++ Pod-to-Service and External-to-Service
+  Implemented by kube-proxy and a packet filter on the node
+So the requirements for implementing a network comes out to 3 main requirements
++ Pods can communicate across nodes
++ Nodes can communicate with pods
++ No Network Access Translation (NAT)
+There are a variety of network vendors to implement this, such as [[https:tigera.io/project-calico/][Project Calico]], [[https:weave.works/oss/net/][Weave]], and [[https:cilium.io/][Cillium]]
+
+Every pod gets its own IP in kubernetes, negating manual configuration. Moreover, most setups even include a DNS server addon called [[https:kubernetes.io/docs/tasks/administer-cluster/coredns/][core-dns]] that can provide service discovery and name resolution in the cluster.
+Be design, every pod can communicate with every other pod, and a network policy is required to control traffic flow at the IP address or port level.
+The Policies can act as an internal cluster firewall, they can be defined for a set of pods or namespace with the help of a selector to specify what traffic is allowed to and from the pods that match the selector.
+IP-based Network Policies are defined with IP blocks (CIRD ranges). Network Policies are implemented by the network plugin. To use Network Policies, you must be using a networking solution which supports NetworkPolicy. Creating a NetworkPolicy resource without a controller that implements it will have no effect.
 ** Scheduling
+In the most basic form, its a sub category of container orchestration and describes the process of automatically choosing the right (worker) node to run a containerized workload on. In the past it used to be a more manual job where the sys admin would choose the server by keeping track of the available servers, their capacity and other properties like location.
+NOt in a kubernetes cluster, the kube-scheduler is the one that schedules the the tasks, but isnt the one that actually starts the containers.
+The scheduling process always starts whenever a new pod is created, because of a declarative approach, where the Pod is only described first, then the scheduler selects a node where the Pod actually will get started by the kubelet and the container runtime.
+A common misconception is that it has some form of "artificial intelligence" that analyses the workload and moving Pods around based on resource consumption, type of workload and other factors. The truth is that a user has to give information about the application requirements, including requests for CPU and memory and properties of a node.
+Like if, a user could request that their application requires 2 CPU cores, 4 GB memory and should preferably be scheduled on a node with fast disks. The scheduler will use that information to filter all nodes that fit these requirements. If multiple nodes fit the requirements equally, Kubernetes will schedule the Pod on the node with the least amount of Pods. This is also the default behavior if a user has not specified any further requirements.
+It is possible that the desired state cannot be established, for example, because worker nodes do not have sufficient resources to run your application. In this case, the scheduler will retry to find an appropriate node until the state can be established.
+** Additional Resources
++ Kubernetes history and the Borg Heritage
+  - [[https:cloud.google.com/blog/products/containers-kubernetes/from-google-to-the-world-the-kubernetes-origin-story][From Google to the world: The Kubernetes origin story]], by Craig McLuckie (2016)
+  - [[https:research.google/pubs/pub43438/][Large-scale cluster management at Google with Borg]], by Abhishek Verma, Luis Pedrosa, Madhukar R. Korupolu, David Oppenheimer, Eric Tune, John Wilkes (2015)
+
++ Kubernetes Architecture
+  - [[https:youtube.com/watch?v=umXEmn3cMWY][Kubernetes Architecture explained | Kubernetes Tutorial 15]]
+
++ RBAC
+  - [[https:cncf.io/blog/2018/08/01/demystifying-rbac-in-kubernetes/][Demystifying RBAC in Kubernetes]], by Kaitlyn Barnard
+
++ Container Runtime Interface
+  - [[https:kubernetes.io/blog/2016/12/container-runtime-interface-cri-in-kubernetes/][Introducing Container Runtime Interface (CRI) in Kubernetes]] (2016)
+
++ Kubernetes networking and CNI
+  - [[https:vmware.com/topics/glossary/content/kubernetes-networking][What is Kubernetes networking?]]
+
++ Internals of Kubernetes Scheduling
+  - [[https:thenewstack.io/a-deep-dive-into-kubernetes-scheduling/][A Deep Dive into Kubernetes Scheduling]], by Ron Sobol (2020)
+
++ Kubernetes Security Tools
+  - [[https:github.com/derailed/popeye][Popeye]]
+  - [[https:github.com/Shopify/kubeaudit][kubeaudit]]
+  - [[https:github.com/aquasecurity/kube-bench][kube-bench]]
+
++ Kubernetes Playground
+  - [[https:labs.play-with-k8s.com/][Play with Kubernetes]]
+* Working with Kubernetes
+Learn about the different kubernetes objectsm their purpose and how to interact with them.
+The smallest compute unit in kubernetes is a pod object.
+** Kubernetes Objects
+One of the core concepts of kubernetes is providing a lot of mostly abstract resources called objects, that you can use to describe how your workload should be handled. Some can handle container orchestration, like scheduling and self healing, others are there to solve some inherent problems containers have.
+The objects can be distinguished between, /workload-oriented/ objects that are used for handling container workloads and /infrastructure-oriented/ objects, that handle things like configuration, networking and security handling. Some of those objects can be put into a namespace , while others are available across the whole cluster.
+We can describe those objects in YAML and send them to the api-serverm where they get some validadion before creation.
+*** Example configuration
+#+begin_src yaml
+  apiVersion: apps/v1
+  kind: Deployment
+  metadata:
+    name: nginx-deployment
+  spec: 
+    selector:
+      matchLabels:
+        app: nginx
+    replicas: 2 # tells deployment to run 2 pods matching the template
+    template:
+      metadata:
+        labels:
+          app: nginx
+      spec:
+        containers:
+        - name: nginx
+          image: nginx:1.19
+          ports:
+          - containerPort: 80
+#+end_src
+The fields required fields include:
+
++ =apiVersion=
+  Each object can be versioned. That means the data structure of the object can change between different versions.
++ =kind=
+  The kind of object that should be created.
++ =metadata=
+  Data that can be used to identify it. A name is required for each object and must be unique. Can use namespaces if multiple objects with the same name are needed.
++ =spec=
+  The specification of the object. Describe desired state. Be cautious, since the structure for the object can change with its version
+Creating, modifying or deleting an object is only a record of intent, where you describe the state your objects should be in.
+pods or containers are not being started like you would on your local machine, and get direct feedback if it worked or not.
+** Interacting with Kubernetes
+** Demo: kubectl
+** Pod Concept
+** Pod Lifecycle
+** Demo: Pods
+** Workload Objects
+** Demo: Workload Objects
+** Networking Objects
+** Demo: Using Services
+** Volume & Storage Objects
+** Configuration Objects
+** Autoscaling Objects
+** Scheduling Objects
+** Kubernetes Security
 ** Additional Resources
