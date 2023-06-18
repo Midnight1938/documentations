@@ -1,0 +1,13 @@
+# A Test yaml config for kubectl
+## Create pod with
+### kubectl create -f testngnix.yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  name: nginx
+spec:
+  containers:
+  - name: nginx
+    image: nginx:1.20
+    ports:
+    - containerPort: 8080

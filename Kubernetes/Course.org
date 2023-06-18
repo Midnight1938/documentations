@@ -696,7 +696,118 @@ Other tools for interaction with Kubernetes are:
 Despite the numerous CLI tools and GUIs, there are also advanced tools that allow creation of templates and packaging of objects.
 Probably the most frequently used tool in connection with Kubernetes today is [[https:helm.sh/][Helm]]. Not to be confused with emacs helm, its a package manager for kubernetes that allows easier updates and interaction with objects. The objects are called charts, and can be shared with others via a registry like [[https:artifacthub.io/][ArtifactHub]], it has ready to deploy software packages
 ** Demo: kubectl
++ Look at my config
+  #+begin_src bash
+    ❯ kubectl config view
+    apiVersion: v1
+    clusters:
+    - cluster:
+        certificate-authority: REDACT/ca.crt
+        extensions:
+        - extension:
+            last-update: Sun, 18 Jun 2023 17:27:09 IST
+            provider: minikube.sigs.k8s.io
+            version: v1.30.1
+          name: cluster_info
+        server: https://127.0.0.1:36975
+      name: minikube
+    contexts:
+    - context:
+        cluster: minikube
+        extensions:
+        - extension:
+            last-update: Sun, 18 Jun 2023 17:27:09 IST
+            provider: minikube.sigs.k8s.io
+            version: v1.30.1
+          name: context_info
+        namespace: default
+        user: minikube
+      name: minikube
+    current-context: minikube
+    kind: Config
+    preferences: {}
+    users:
+    - name: minikube
+      user:
+        client-certificate:
+        REDACT/client.crt
+        client-key:
+        REDACT/client.key
+#+end_src
+*** Making a pod from yaml
++ Create an ngnix pod
+  #+begin_src yaml
+    apiVersion: v1
+    kind: Pod
+    metadata:
+      name: nginx
+    spec:
+      containers:
+      - name: nginx
+        image: nginx:1.20
+        ports:
+        - containerPort: 8080
+#+end_src
++ check status with
+  #+begin_src bash
+    ❯ kubectl get pod
+    NAME    READY   STATUS              RESTARTS   AGE
+    nginx   0/1     ContainerCreating   0          4s
+    ❯ kubectl get pod
+    NAME    READY   STATUS    RESTARTS   AGE
+    nginx   1/1     Running   0          35s
+#+end_src
++ Delete with =kubectl delete pod ngnix= and itll be gone
+
 ** Pod Concept
+Like I said, the most important object in kubernetes is the pod. Its a unit of one or more containers that share an isolation layer of namespaces of cgroups. Pods are the smallest deployable unit in kubernetes, it also means that kubernetes doesnt directly interact with the containers. The concept of pods was introduced to allow  running a combination of multiple processes that are interdependent. ALl containers inside a pod share the same IP and filesystem.
+[[file:pics/sharespace.png]]
++ Example for a pod with two containers is as follows, just a yaml like before with 2 containers
+  #+begin_src yaml
+    apiVersion: v1
+    kind: Pod
+    metadata:
+      name: nginx-with-sidecar
+    spec:
+      containers:
+      - name: nginx
+        image: nginx:1.19
+        ports:
+        - containerPort: 80
+      - name: count
+        image: busybox:1.34
+        args: [/bin/sh, -c, 'i=0; while true; do echo "$i: $(date)"; i=$((i+1)); sleep 1; done']
+#+end_src
+  Although one can add as many containers as the heart desires, but do loose the ability to scale them individually. \
+  Using a second container to support the main application is called a /sidecar controller/.
++ Containers are all started at the same time in no order. But there is =initContainers= key/argument that can start containers before the main application. For example init-myservice tries to reach another service, before the main application is woken up.
+  #+begin_src yaml
+    apiVersion: v1
+    kind: Pod
+    metadata:
+      name: myapp-pod
+      labels:
+        app: myapp
+    spec:
+      containers:
+      - name: myapp-container
+        image: busybox
+        command: ['sh', '-c', 'echo The app is running! && sleep 3600']
+      initContainers:
+      - name: init-myservice
+        image: busybox
+        command: ['sh', '-c', 'until nslookup myservice; do echo waiting for myservice; sleep 2; done;']
+#+end_src
+There is a lot more to learn about Pods, there are many more settings to tinker. Some other important settings that can be set for containers in a Pod are:
+- resources: Set a resource request and a maximum limit for CPU and Memory. 
+- livenessProbe: Configure a health check that periodically checks if application is livid. Containers can be restarted if the check fails. 
+- securityContext: Set user & group settings, as well as kernel capabilities.
+#+begin_quote
+Podman pods and kubernetes pods are both pods, but podman is a container engine and kubernetes is an orchestration engine that manages containerized apps across a cluster of nodes. Also you can use podman within kubenetes.
+
+Think of pods as a ship, and podman is just a makeshift stop, kubenetes is a port
+#+end_quote
+  
 ** Pod Lifecycle
 ** Demo: Pods
 ** Workload Objects
