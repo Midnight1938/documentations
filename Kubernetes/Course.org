@@ -807,10 +807,45 @@ Podman pods and kubernetes pods are both pods, but podman is a container engine 
 
 Think of pods as a ship, and podman is just a makeshift stop, kubenetes is a port
 #+end_quote
-  
 ** Pod Lifecycle
-** Demo: Pods
+Pods, like in nature, follow a defined lifecycle, it starts in the /pending/ phase, moving through /Running/ if atleast one primary container wakes up okay. Then finally it either /Suceeded/ or /Failed/ phases, depending on the failure of any container.
+*** Lifecycl of a Pod
++ Pending
+  The Pod has been accepted by the cluster, but one or more of the containers has not been set up and made ready to run.
+  This includes time a Pod spends waiting to be scheduled, as well as the time spent downloading container images over the network.
++ Running
+  The Pod has been bound to a node, and all of the containers have been created.
+  At least one container is still running, or is in the process of starting or restarting.
++ Succeeded
+All containers in the Pod have terminated in success, and will not be restarted.
++ Failed
+All containers in the Pod have terminated, and at least one container has terminated in failure.
+Meaning the container either exited with non-zero status or was terminated by the system.
++ Unknown
+For some reason, the state of the Pod could not be obtained. This phase typically occurs due to an error in communicating with the node where the Pod should be running.
+** TODO Demo: Pods 
 ** Workload Objects
+Working with just the pods would not be flexible enough in a container orchestration platform. Like if a Pod is lost because a node failed, its gone, gone with the wind. To make sure that a defined number of Pod copies runs all the time, we can use controller objects that manage the pod for us.
++ ReplicaSet
+  A controller object that ensures a desired number of pods is running at any given time.
+  They can be used to scale out applications and improve their availability, by starting multiple copies of a pod definition.
++ Deployment
+  The most feature-rich object in Kubernetes. A Deployment can be used to describe the complete application lifecycle, by managing multiple ReplicaSets that get updated when the application is changed by providing a new container image. Deployments are perfect to run stateless applications in Kubernetes.
++ StatefulSet
+  Considered a bad practice for a long time, StatefulSets can be used to run stateful applications like databases on Kubernetes.
+  Stateful applications have special requirements that don't fit the ephemeral nature of pods and containers.
+  In contrast to Deployments, StatefulSets try to retain IP addresses of pods and give them a stable name, persistent storage and more graceful handling of scaling and updates.
++ DaemonSet
+  Ensures that a copy of a Pod runs on all (or some) nodes of your cluster. They are perfect to run infrastructure-related workload, like monitoring or logging tools.
+
+Now linuxy stuff
++ Job
+  Creates one or more Pods that execute a task and terminate afterwards. Job objects are perfect to run one-shot scripts like database migrations or administrative tasks.
++ CronJob
+  CronJobs add a time-based configuration to jobs. This allows running Jobs periodically, for example doing a backup job every night at 4am.
+*** Interactive Tutorial
+You can learn how to deploy an application in your Minikube cluster in the [[https:kubernetes.io/docs/tutorials/kubernetes-basics/deploy-app/deploy-intro/][second part]] of the interactive tutorial available in the Kubernetes documentation.
+Apply what you have learned from "Interacting with Kubernetes" to explore your app in the [[https:kubernetes.io/docs/tutorials/kubernetes-basics/explore/explore-intro/][third part]] of the interactive tutorial.
 ** Demo: Workload Objects
 ** Networking Objects
 ** Demo: Using Services
