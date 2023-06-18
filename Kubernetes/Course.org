@@ -257,7 +257,7 @@ Theyre called containers as a metaphor aiming at shipping containers that are st
     Docker calls it:
     #+begin_example
     Docker container image is a lightweight, standalone, executable package of software that includes everything needed to run an application: code, runtime, system tools, system libraries and settings.
-    #+end_example
+  #+end_example
   [[file:pics/oci_spec.png]]
   The image format made popular by docker was donated to the OCI initiative and is now known as [[https:github.com/opencontainers/image-spec][OCI Image Spec]]. The images consist of a filesystem bundle and metadata.
 + Container Images
@@ -284,23 +284,23 @@ Theyre called containers as a metaphor aiming at shipping containers that are st
       # The process that should be started when the container runs
       # In this case we start our python app "my-app.py"
       CMD ["python3","my-app.py"]
-    #+END_SRC
+  #+END_SRC
   2. Then proceed to build the image
      #+BEGIN_SRC bash
        podman build -t my-py-img -f Dockerfile # or docker
-     #+END_SRC
+   #+END_SRC
      the ~-t~ implies the name tag for the image and ~-f~ the location of the Dockerfile. Giving the developers the ability to manage all dependencies of their app on top of packaging it, ready to run. Instead of leaving it to someone else.
   3. Pushing to registry
      You can then distribute your image using a container registry, which is a web server which can store and share images. Podman does have push and pull (so does docker):
      #+begin_src bash
        podman push my-registry.com/my-python-image
        podman pull my-registry.com/my-python-image
-     #+end_src
+   #+end_src
 *** Demo: Building Container Images
 + Pull out the docker sample repo like so
   #+begin_src bash
     git clone https://github.com/docker/getting-started.git
-  #+end_src
+#+end_src
 + Create a Dockerfile with the following contents:
   #+begin_src dockerfile
     # syntax=docker/dockerfile:1
@@ -310,12 +310,12 @@ Theyre called containers as a metaphor aiming at shipping containers that are st
     RUN yarn install --production # What to run at initiation
     CMD ["node", "src/index.js"] # Default process started at podman run
     EXPOSE 3000 # Set exposed port (can also do '--publish 3000:3000' nameOapp)
-  #+end_src
+#+end_src
 + Then simply build the container:
   #+begin_src bash
     podman build -t nameOapp
     podman run --detach --publish 3000:3000 nameOapp
-  #+end_src
+#+end_src
   then check container with ~podman ps~  and rename, stop, start as necessary
 ** Security
 Its essential to understand that containers have different sec-req from VMs. And while a lot of people rely on the isolation property of containers for security, its not always enough. The containers started on a machine share the same kernel, which is an attack vector in the system, if the containers are allowed to call kernel functions like killing a process, or modifying the host network by creating routing rules. More about kernel properties are available in the [[https:docs.docker.com/engine/security/#linux-kernel-capabilities][documentation]].
@@ -506,7 +506,7 @@ E0616 19:41:17.193581   11462 cache.go:188] Error downloading kic artifacts:  no
 + use =Calico= as an overlay network for the cluster with:
   #+begin_src bash
     minikube start --network-plugin=cni --cni=calico
-  #+end_src
+#+end_src
 Thats prettymuch it, look at actual documentation to make nodes
 ** Kubernetes API
 The kubernetes API allows communication with clusters, every user and every component of the cluster itself needs the API server.
@@ -635,6 +635,66 @@ The fields required fields include:
 Creating, modifying or deleting an object is only a record of intent, where you describe the state your objects should be in.
 pods or containers are not being started like you would on your local machine, and get direct feedback if it worked or not.
 ** Interacting with Kubernetes
+Users can use the [[https:kubernetes.io/docs/tasks/tools/#kubectl][kubectl]] to access the API.
++ In order to list the available objects in the cluster use:
+  #+begin_src bash
+    ❯ kubectl api-resources
+    NAME               SHORTNAMES  APIVERSION  NAMESPACED  KIND
+    bindings                       v1          true        Binding
+    componentstatuses  cs          v1          false       ComponentStatus
+    configmaps         cm          v1          true        ConfigMap
+    endpoints          ep          v1          true        Endpoints
+    events             ev          v1          true        Event
+    limitranges        limits      v1          true        LimitRange
+    namespaces         ns          v1          false       Namespace
+    nodes              no          v1          false       Node
+#+end_src
+  The shortnames are quite helpful for objects with longer names like componentstatuses. The table also shows the objects namespaced and their version
++ kubectl also has a built in explaination function to help
+  #+begin_src bash
+    ❯ kubectl explain nodes
+    KIND:       Node
+    VERSION:    v1
+
+    DESCRIPTION:
+        Node is a worker node in Kubernetes. Each node will have a unique identifier
+        in the cache (i.e. in etcd).
+    
+    FIELDS:
+      apiVers ...
+#+end_src
+  - It also has the ability to drill down into specifics.
+    #+begin_src bash
+      ❯ kubectl explain namespaces.spec
+      KIND:       Namespace
+      VERSION:    v1
+
+      FIELD: spec <NamespaceSpec>
+
+      DESCRIPTION:
+          Spec defines the behavior of the Namespace. More info:
+          https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#spec-and-status
+          NamespaceSpec describes the attributes on a Namespace.
+    
+      FIELDS:
+        finalizers	<[]stri ...
+#+end_src
++ There is also, ofcourse the ~--help~ flag to view basic commands.
++ To create an object in kubernetes from a YAML file one can simply run the command:
+#+begin_src yaml
+  kubectl create -f <your-file>.yaml
+#+end_src
+Theres also the ability to use GUI and dashboards for kubernetes that allow a virual interaction with the cluster.
+[[file:pics/official-Kube-Dash.png]]
+Other tools for interaction with Kubernetes are:
+
+- kubernetes/dashboard
+- derailed/k9s
+- Lens
+- VMware Tanzu Octant
+
+Despite the numerous CLI tools and GUIs, there are also advanced tools that allow creation of templates and packaging of objects.
+Probably the most frequently used tool in connection with Kubernetes today is [[https:helm.sh/][Helm]]. Not to be confused with emacs helm, its a package manager for kubernetes that allows easier updates and interaction with objects. The objects are called charts, and can be shared with others via a registry like [[https:artifacthub.io/][ArtifactHub]], it has ready to deploy software packages
 ** Demo: kubectl
 ** Pod Concept
 ** Pod Lifecycle
