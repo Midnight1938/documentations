@@ -1103,10 +1103,134 @@ Containers do have a way to mount volumes, but we dont work with containers in k
         type: Directory # this field is optional
 #+end_src
 Volumes allow the maker to share data between multiple containers within the pod. It allows for great flexibility when you want to use the /sidecar pattern/. They also help save data at the chance that a pod crashes and is restartid at the same node. Because the pod will be started in a clean state, but all data will be lost without persistence.
+Unfortunately, pods work within cluster environment with multiple servers, which then requires even more flexibility for persistent storage. Depending on the environment one could use cloud block storages like [[https:aws.amazon.com/ebs/][Amazon EBS]], [[https:cloud.google.com/persistent-disk][Google Persistent Disks]], [[https:azure.microsoft.com/en-us/services/storage/disks/][Azure Disk Storage]], or consume form storage systems like [[https:ceph.io/en/][Ceph]], [[https:gluster.org/][GlusterFS]], or even a more 'traditional' option like [[https:en.wikipedia.org/wiki/Network_File_System][NFS]].
+Following are some examples of storage that can be used in Kubernetes. To make the user experience more uniform, Kubernetes is using the [[https:github.com/container-storage-interface/spec][Container Storage Interface (CSI)]] which allows the storage vendors to write a plugin that can be used in Kubernetes. To use this abstraction, we have two more objects in use:
++ PersistentVolumes (PV)
+  An abstract description for a slice of storage. The object configuration holds information like type of volume, volume size, access mode and unique identifiers and information how to mount it.
++ PersistentVolumeClaims (PVC)
+  A request for storage by a user. If the cluster has multiple persistent volumes, the user can create a PVC which will reserve a persistent volume according to the user's needs. 
++ Example of Persistent Volume
+  #+begin_src yaml
+    apiVersion: v1
+    kind: PersistentVolume
+    metadata:
+      name: test-pv
+    spec:
+      capacity:
+        storage: 50Gi
+      volumeMode: Filesystem
+      accessModes:
+        - ReadWriteOnce
+      csi:
+        driver: ebs.csi.aws.com
+        volumeHandle: vol-05786ec9ec9526b67
+    ---
+    apiVersion: v1
+    kind: PersistentVolumeClaim
+    metadata:
+      name: ebs-claim
+    spec:
+      accessModes:
+        - ReadWriteOnce
+      resources:
+        requests:
+          storage: 50Gi
+    ---
+    apiVersion: v1
+    kind: Pod
+    metadata:
+      name: app
+    spec:
+      containers:
+        - name: app
+          image: centos
+          command: ["/bin/sh"]
+          args:
+            ["-c", "while true; do echo $(date -u) >> /data/out.txt; sleep 5; done"]
+          volumeMounts:
+            - name: persistent-storage
+              mountPath: /data
+      volumes:
+        - name: persistent-storage
+          persistentVolumeClaim:
+            claimName: ebs-claim
+#+end_src
+  It shows a PersistentVolume that uses an AWS EBS volume implemented with a CSI driver. After its provisioned, a deceloper can reserve it with a PersistentVolumeClaim. The last step is using the PVC as a volume in a Pod, just like the HostPath example before.
 
-Unfortunately, pods work within cluster environment with multiple servers, which then requires even more flexibility for persistent storage. Depending on the environment one could use cloud block storages like [[https:aws.amazon.com/ebs/][Amazon EBS]], [[https:cloud.google.com/persistent-disk][Google Persistent Disks]], [[https:azure.microsoft.com/en-us/services/storage/disks/][Azure Disk Storage]], or consume form storage systems like [[https:ceph.io/en/][Ceph]], [[https:gluster.org/][GlusterFS]], or even a more 'traditional' option like [[https:en.wikipedia.org/wiki/Network_File_System][NFS]]
+[[file:pics/RookArch.png]]
+Its possible to operate storage clusters directly in Kubernetes. Projects like [[https:rook.io/][Rook]] provide cloud-native storage orchestration and integrate with battle tested storage solutions like Ceph.
+
 ** Configuration Objects
+Going back to the twelve factor app in Section 1, it recommends storing configuration in the environment. But whats that?
+Running an app requires more than just the code and some libraries. The applications have configs, connect to services, databases, storage systems or caches, and that requires extra configs like [[https:en.wikipedia.org/wiki/Connection_string][connection strings]].
+
+It is considered bad practice to incorporate the configuration directly into the container build. As any config change would require the entire image to be rebuilt and the entire container or pod to be redeployed.
+This only gets worse when multiple environments (developing, staging, production) are used and images are being built for alll environments. 12 factor app explains it in [[https:12factor.net/dev-prod-parity][Dev/prod parity]].
+
+In Kubernetes, the problem is solved by decoupling the config from the Pods with a /ConfigMap/.
+ConfigMaps can be used to store whole configuration files or variables as key-value pairs. There are two possible ways to use a ConfigMap:
++ Mount a ConfigMap as a volume in Pod
++ Map variables from a ConfigMap to environment variables of a Pod.
+
+- An example of a ConfigMap with nginx looks like so:
+  #+begin_src yaml
+    apiVersion: v1
+    kind: ConfigMap
+    metadata:
+      name: nginx-conf
+    data:
+      nginx.conf: |
+        user nginx;
+        worker_processes 3;
+        error_log /var/log/nginx/error.log;
+    ...
+          server {
+              listen     80;
+              server_name _;
+              location / {
+                  root   html;
+                  index  index.html index.htm; } } }
+#+end_src
+- Once created, it can be used to make a Pod:
+  #+begin_src yaml
+    apiVersion: v1
+    kind: Pod
+    metadata:
+      name: nginx
+    spec:
+      containers:
+      - name: nginx
+        image: nginx:1.19
+        ports:
+        - containerPort: 80
+        volumeMounts:
+        - mountPath: /etc/nginx
+          name: nginx-conf
+      volumes:
+      - name: nginx-conf
+        configMap:
+          name: nginx-conf
+#+end_src
+
+Right from the beginning, Kubernetes also provided an object to store sensitive information, like passwords, keys or other credentials.
+These objects are called Secrets. They are very much related to ConfigMaps and basically their only difference is that secrets are base64 encoded.
+There is an on-going debate about the risk of using Secrets, since their - in contrast to their name - not considered secure.
+
+In cloud native environments, purpose-built secret management tools have emerged that integrate very well with kubernetes. Like [[https:vaultproject.io/][HashiCorp Vault]]
 ** Autoscaling Objects
 ** Scheduling Objects
 ** Kubernetes Security
 ** Additional Resources
++ Differences between Containers and Pods
+  - [[https:ianlewis.org/en/what-are-kubernetes-pods-anyway][What are Kubernetes Pods Anyway?]], by Ian Lewis (2017)
+  - [[https:iximiuz.com/en/posts/containers-vs-pods/][Containers vs. Pods - Taking a Deeper Look]], by Ivan Velichko (2021)
+
++ kubectl tips & tricks
+  - [[https:kubernetes.io/docs/reference/kubectl/cheatsheet/][kubectl Cheat Sheet]]
+
++ Storage and CSI in Kubernetes
+  - [[https:kubernetes.io/blog/2019/01/15/container-storage-interface-ga/][Container Storage Interface (CSI) for Kubernetes GA]], by Saad Ali (2019)
+  - [[https:inovex.de/de/blog/kubernetes-storage-volume-cloning-ephemeral-inline-volumes-snapshots/][Kubernetes Storage: Ephemeral Inline Volumes, Volume Cloning, Snapshots and more!]], by Henning Eggers (2020)
+
++ Autoscaling in Kubernetes
+  - [[https:learnk8s.io/kubernetes-autoscaling-strategies][Architecting Kubernetes clusters - choosing the best autoscaling strategy]], by Daniele Polencic (2021)
