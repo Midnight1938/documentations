@@ -885,7 +885,7 @@ Apply what you have learned from "Interacting with Kubernetes" to explore your a
       ports:
       - containerPort: 8080
 #+end_src
-You can now create it with ~kubectl create -f singleboi.yaml~ and then also see whats up in the background! With [[https:github.com/benc-uk/kubeview][KubeView]] (dont have)
+You can now create it with ~kubectl create -f singleboi.yaml~ and then also see whats up in the background! With [[https:github.com/benc-uk/kubeview][KubeView]] (dont have, theres also ~minikube dashboard --url)
 + Now a ReplicaSet! With 3 replicas
   #+begin_src yaml
     apiVersion: apps/v1
