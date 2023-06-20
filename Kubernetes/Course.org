@@ -470,7 +470,7 @@ If you don’t want to install and manage it yourself, you can consume it from a
 + [[https:azure.microsoft.com/en-us/services/kubernetes-service][Microsoft (AKS)]]
 + [[https:digitalocean.com/products/kubernetes/][DigitalOcean (DOKS)]]
 
-You can learn how to set up your own Kubernetes cluster with Minikube in this [[https:kubernetes.io/docs/tutorials/kubernetes-basics/create-cluster/cluster-intro/][interactive tutorial]].
+You can learn how to set up your own Kubernetes cluster with Minikube in this [[https:kubernetes.io/docs/tutorials/kubernetes-basics/create-cluster/cluster-intro/][interactive tutorial]].  [[https:minikube.sigs.k8s.io/docs/handbook/accessing/][Important info for exposing tunnels]]
 ** Demo: Kubernetes Setup
 The aim is to install a simple 2 node cluster using [[https:kubernetes.io/docs/setup/production-environment/tools/kubeadm/install-kubeadm/][kubeadm]]
 It requires us to disable swap, have port 6443 free and install containerd, none of which i will do. It gives us 3 main packages
@@ -885,7 +885,7 @@ Apply what you have learned from "Interacting with Kubernetes" to explore your a
       ports:
       - containerPort: 8080
 #+end_src
-You can now create it with ~kubectl create -f singleboi.yaml~ and then also see whats up in the background! With [[https:github.com/benc-uk/kubeview][KubeView]] (dont have)
+You can now create it with ~kubectl create -f singleboi.yaml~ and then also see whats up in the background! With [[https:github.com/benc-uk/kubeview][KubeView]] (dont have, theres also ~minikube dashboard --url~)
 + Now a ReplicaSet! With 3 replicas
   #+begin_src yaml
     apiVersion: apps/v1
@@ -1035,7 +1035,51 @@ Kubernetes also provides a cluster internal firewall with the NetworkPolicy conc
 A typical use case for NetworkPolicies would be restricting the traffic between two different namespaces.
 
 Use a tutorial to [[https:kubernetes.io/docs/tutorials/kubernetes-basics/expose/expose-intro/][Expose your app]] in part 4 of kubernetes documentation
-** TODO Demo: Using Services
+** Demo: Using Services
+Lets make apps available and load balance across pods.
++ Finally use echoserver instead of nginx
+  #+begin_src yaml
+    apiVersion: apps/v1
+    kind: Deployment
+    metadata:
+      labels:
+        app: echoserver
+      name: echoserver
+    spec:
+      replicas: 3
+      selector:
+        matchLabels:
+          app: echoserver
+      template:
+        metadata:
+          creationTimestamp: null
+          labels:
+            app: echoserver
+        spec:
+          containers:
+          - image: k8s.gcr.io/echoserver:1.10
+            name: echoserver
+            ports:
+            - containerPort: 8080
+#+end_src
+Ill try the tutorial at [[https:minikube.sigs.k8s.io/docs/handbook/controls/][minikube docs]] and did ~kubectl expose deployment echoserver --type=NodePort --port=8080~ then ~minikube service echoserver~ maybe itll work. =DID!!! eheheheehh=. [[https:minikube.sigs.k8s.io/docs/handbook/accessing/][Important info]]
+#+begin_quote
+Must make a tunnel to the cluster in order to access it
+#+end_quote
++ Now a service exposure
+  Use ~kubectl expose deployment echoserver --port=8080~
+  That has made a cluster IP, that will pull an response from one of the pods. We did that already, somehow
+  #+begin_src bash
+    ❯ kubectl get service
+    NAME         TYPE        CLUSTER-IP       EXTERNAL-IP   PORT(S)          AGE
+    echoserver   NodePort    10.102.132.109   <none>        8080:32615/TCP   20m
+    kubernetes   ClusterIP   10.96.0.1        <none>        443/TCP          38m
+#+end_src
++ It is now scalable and stuff, now replicating and curling for show:
+  Replicate the server to 6
+  Start the service with ~minikube service echoserver~ and curl the url for a while with ~watch curl http://127.0.0.1:40011~ and youll see the hostnames change to balance loads
+*** [[https:github.com/GoogleCloudPlatform/microservices-demo][Demo Application]] by google
+[[file:pics/googlex.png]]
 ** Volume & Storage Objects
 [[file:pics/volumeMnt.png]]
 Its common knowledge that containers are not designed for persistent storage, especially when storage spans across multiple nodes. Kubernetes does include some solutions, but they dont automatically remove the complexities of managing storage with containers.
