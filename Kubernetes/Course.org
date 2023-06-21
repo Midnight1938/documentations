@@ -1,4 +1,3 @@
-
 #+title: Kuberetes and Cloud native essentials
 #+date: <2023-06-07 Wed>
 #+duedate: <2023-06-30 Fri>
@@ -53,6 +52,11 @@
   - [[#scheduling-objects][Scheduling Objects]]
   - [[#kubernetes-security][Kubernetes Security]]
   - [[#additional-resources-3][Additional Resources]]
+- [[#cloud-native-application-delivery][Cloud Native Application Delivery]]
+  - [[#application-delivery-fundamentals][Application Delivery Fundamentals]]
+  - [[#cicd][CI/CD]]
+  - [[#gitops][GitOps]]
+  - [[#additional-resources-4][Additional Resources]]
 
 * Cloud Native Architecture Fundamentals
 With the rise of cloud computing, the requirements and possibilities for developing, deploying and designing applications have changed significantly.
@@ -1033,7 +1037,7 @@ A lot of ingress controllers even provide more features, like:
   
 Kubernetes also provides a cluster internal firewall with the NetworkPolicy concept. Its a simple IP firewall (OSI Layer 3 or 4) that can control traffic based on rules. You can define rules for incoming (/ingress/) and outgoing traffic (/egress/).
 A typical use case for NetworkPolicies would be restricting the traffic between two different namespaces.
-
+*** Interactive Tutorial
 Use a tutorial to [[https:kubernetes.io/docs/tutorials/kubernetes-basics/expose/expose-intro/][Expose your app]] in part 4 of kubernetes documentation
 ** Demo: Using Services
 Lets make apps available and load balance across pods.
@@ -1217,9 +1221,96 @@ These objects are called Secrets. They are very much related to ConfigMaps and b
 There is an on-going debate about the risk of using Secrets, since their - in contrast to their name - not considered secure.
 
 In cloud native environments, purpose-built secret management tools have emerged that integrate very well with kubernetes. Like [[https:vaultproject.io/][HashiCorp Vault]]
-** Autoscaling Objects
+** TODO Autoscaling Objects
+There are 3 main autoscaling mechanisms available in container orchestration, namely
++ Horizontal Pod Autoscaler (HPA)
+  [[https:kubernetes.io/docs/tasks/run-application/horizontal-pod-autoscale/][Pod Autoscaler]] is the most used autoscaler in kubernetes. It can watch Deployments or ReplicaSets and increase the number of Replicas if a certain threshold is reached. Say imaging your pod uses 500MiB and you configure a threshold of 80%, a second pod will be scheduled if the usage reaches 400MiB. Making the capacity 1000MiB, then again, a new pod will be scheduled when threshold reaches 800MiB.
++ Cluster Autoscaler
+  Of course, theres no point in starting more and more Replicas of Pods, if the Cluster capacity is fixed.
+  The [[https:github.com/kubernetes/autoscaler/tree/master/cluster-autoscaler][Cluster Autoscaler]] can add new worker nodes to the cluster if the demand increases. It works great in tandem with the Horizontal Autoscaler.
++ Vertical Pod Autoscaler
+  [[https:github.com/kubernetes/autoscaler/tree/master/vertical-pod-autoscaler][Vertical autoscaler]] is a relatively new concept and allows new Pods to increase the resource requests and limits dynamically. And ofcourse, as mentioned earlier, its limited by node capacity.
+Unfortunately, kubernetes does not support autoscaling out of the box and must be enabled with an addon like the [[https:github.com/kubernetes-sigs/metrics-server][metrics-server]]. Though it is possible to replace it with the[[https:github.com/kubernetes-sigs/prometheus-adapter][Prometheus Adapter for Kubernetes Metrics APIs]]. The adapter allows you to use custom metrics in Kubernetes and scale up or down based on things like requests or number of users on your system.
+Rather
+Rather than relying solely on metrics, projects like [[https:keda.sh/][KEDA]] can be used to scale the Kubernetes workload based on events triggered by external systems. It stands for /Kubernetes-based Event Driven Autoscaler/ and was started in 2019 as a partnership between Microsoft and Red Hat.
+Similar to the HPA, KEDA can scale deployments, ReplicaSets, pods, etc., but also other objects such as Kubernetes jobs. With a large selection of out-of-the-box scalers, KEDA can scale to special triggers such as a database query or even the number of pods in a Kubernetes cluster.
+*** TODO Interactive Tutorial - Scale Your App
+You can learn how to scale up your application manually in the fifth part of the interactive tutorial: [[https:kubernetes.io/docs/tutorials/kubernetes-basics/scale/scale-intro/][Running Multiple Instances of Your App]]
 ** Scheduling Objects
+Scheduler is a control process that assigns pods to nodes. The scheduler is the one that determines which nodes are valid placements for a each Pod in the scheduling queue in regards to the constraints and the available resources. It ranks each valid Node and binds the Pod to a suitable Node. Multiple schedulers, of different kinds, may be used within a cluster, with kube-scheduler being the default scheduler.
+Following methods are available when it comes to schedlers
++ nodeSelector field matching against node labels
+  nodeSelector is the simplest recommended form of node selection constraint. One can add the nodeSelector field to the Pod specification and specify the node labels you want the target node to have.
+  Kubernetes only schedules the Pod onto nodes that have each of the labels you specify.
++ Affinity and anti-affinity
+  Affinity and anti-affinity expands the types of constraints you can define and give you more control over the selection logic. You can indicate that a rule is soft or preferred, so that the scheduler still schedules the Pod even if it can't find a matching node.
++ nodeName field
+  nodeName is a more direct form of node selection than affinity or nodeSelector. nodeName is a field in the Pod spec.
+  If the nodeName field is not empty, the scheduler ignores the Pod and the kubelet on the named node tries to place the Pod on that node. Using nodeName overrules using nodeSelector or affinity and anti-affinity rules.
++ Pod topology spread constraints
+  You can use topology spread constraints to control how Pods are spread across your cluster among failure-domains such as regions, zones, nodes, or among any other topology domains that you define.
+  One might do this to improve performance, expected availability, or overall utilization.
+
+*** Taints and Tolerations
+Node affinity is a property of Pods that attracts them to a set of nodes (either as a preference or a hard requirement).
+Taints are the opposite - they allow a node to repel a set of pods.
+Tolerations are applied to pods. Tolerations allow the scheduler to schedule pods with matching taints. Tolerations allow scheduling, but don't guarantee scheduling: the scheduler also evaluates other parameters as part of its function.
+Taints and tolerations work together to ensure that pods are not scheduled onto inappropriate nodes. One or more taints are applied to a node; this marks that the node should not accept any pods that do not tolerate the taints.
+A taint consists of a key, value, and effect. As an argument here, it is expressed as =key=value:effect=.
+
+Such as ~kubectl taint node worker region=useast2:NoSchedule~
+- The key must begin with a letter or number, and may contain letters, numbers, hyphens, dots, and underscores, up to 253 characters.
+- The value is optional. If given, it must begin with a letter or number, and may contain letters, numbers, hyphens, dots, and underscores, up to 63 characters.
+- The effect must be NoSchedule, PreferNoSchedule or NoExecute and Currently taint can only apply to nodes.
+
+Toleration for a pod is specified in the PodSpec. A toleration "matches" a taint if the keys are the same and the effects are the same, and thus a pod with toleration would be able to schedule onto nodes. Such as:
+#+begin_src yaml
+  tolerations:
+  - key: "region"
+    operator: "Equal"
+    value: "useast2"
+    effect: "NoSchedule" 
+#+end_src
+
 ** Kubernetes Security
+Security is a broad concept in a distributed system like kubernetes, it takes constant effort to keep a cloud system secure. We must consider more than just Kubernetes, and consider the hardware, software, and configuration options for the complete environment as more and more apps migrate to the cloud.
+Hardware, firmware, and operating system binaries must be secured starting in the design phase itself. And once the platform is hardened, the kube-api, itself has a list of considerations, tools and settings to limit access and formalize access in an easy to understand manner.
+The network-intensive environment makes security on kubernetes quite essential. Its accomplished by using firewall techniques from outside the cluster, pod-to-pod encryption, a networkpolicy, and other measures within the cluster.
+Minimizing base images, insisting on container immutability, and static and runtime analysis of tools is also an important part of security, which often begins with developers and is implemented in the CI/CD pipeline prior to an image being used in a production cluster.
+Tools like /AppArmor/ and /SELinux/ should also be used to further protect the environment from malicious containers.
+
+Security is more than just ‘settings and configuration’. It is an ongoing process of issue detection using intrusion detection tools and behavioral analytics. There needs to be an ongoing process of assessment, prevention, detection, and reaction following written and often updated policies.
+*** Accessing the API
+1. Authentication (tokens)
+   The type of authentication used is defined in the kube-apiserver startup options. Following are some examples, more available in the [[https:kubernetes.io/docs/admin/authentication/][documentation]]
+   - ~--basic-auth-file~
+   - ~--oidc-issuer-url~
+   - ~--token-auth-file~
+   - ~--authorization-webhook-config-file~
+2. Authorization (RBAC)
+   The RBAC stands for Role Based Access Control. All resources are modeled API objects in Kubernetes, from Pods to Namespaces. They also belong to API Groups such like *core* and *apps*. These resources allow operations such as Create, Read, Update, and Delete (CRUD), which we have been working with so far.
+   In YAML files, the operation is reffered to as verbs. And we are able to add more API elements to these, fundamental ones, which can subsequently be controlled by the RBAC.
+   - So rules are operations which can act upon an API group.
+   - Roles are a group of rules which affect or scope, a single namespace, while ClusterRoles have a scope of the entire cluster.
+   Each operation can act upon one of three subjects:
+   - User Accounts, which don’t exist as API objects
+   - Service Accounts, and Groups, which are known as /clusterrolebinding/ when using kubectl.
+
+   So [[https:kubernetes.io/docs/admin/authorization/rbac][RBAC]] in conclusion is writing rules to allow or deny operations by users, roles or groups upon resources.
+
+3. Admission Controllers
+The last step in letting an API request into Kubernetes is Admission Control.
+
+Admission controllers are pieces of software that can access the content of the objects being created by requests. They can modify the content or validate it, and even potentially deny the request.
+They are needed for certain features to work properly. Controllers have been added as Kubernetes has matured.
+As of the v1.12 release, the kube-apiserver uses a compiled-in set of controllers. Instead of passing a list, we can enable or disable particular controllers. If you want to use a controller not available by default, you would need to download source and compile.
+
+The first controller is Initializers, which will allow dynamic modification of the API request, providing great flexibility. Each admission controller functionality is explained in the documentation. For example, the /ResourceQuota/ controller will ensure that the object created does not violate any of the existing quotas.
+
+Additionally, tools like the [[https:openpolicyagent.org/][Open Policy Agent]] can be used to manage admission control externally.
+The Open Policy Agent (OPA, pronounced “oh-pa”) is an open source, general-purpose policy engine that unifies policy enforcement across the stack. OPA provides a high-level declarative language that lets you specify policy as code and simple APIs to offload policy decision-making from your software. You can use OPA to enforce policies in microservices, Kubernetes, CI/CD pipelines, API gateways, and more.
+It was originally created by Styra and is a graduated project in the Cloud Native Computing Foundation (CNCF) landscape.
+
 ** Additional Resources
 + Differences between Containers and Pods
   - [[https:ianlewis.org/en/what-are-kubernetes-pods-anyway][What are Kubernetes Pods Anyway?]], by Ian Lewis (2017)
@@ -1234,3 +1325,11 @@ In cloud native environments, purpose-built secret management tools have emerged
 
 + Autoscaling in Kubernetes
   - [[https:learnk8s.io/kubernetes-autoscaling-strategies][Architecting Kubernetes clusters - choosing the best autoscaling strategy]], by Daniele Polencic (2021)
+* Cloud Native Application Delivery
+** Application Delivery Fundamentals
+Every app starts its life with written code. But source code isnt just the basis of an application, but is also the Intellectuay Property and therefore the capitalo of most compaines or individuals (glorified मंगलसूत्र). And the world figured it out a long time ago that the best way to manage the source code is a version control system like git, gnu bazaar or bitbucket.
+Torvalds made git around 2005 after being angry about the proprietary system they were using for versioning linux. Git is a decentralized system  that can be used to track changes in your source. In essence, Git can work with copies of the code, in so called branches or forks where you can work in, before your changes get merged back in a main branch. Youre reading this on github what are you doing.
+
+** CI/CD
+** GitOps
+** Additional Resources
