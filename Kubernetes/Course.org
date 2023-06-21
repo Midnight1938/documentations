@@ -1328,8 +1328,31 @@ It was originally created by Styra and is a graduated project in the Cloud Nativ
 * Cloud Native Application Delivery
 ** Application Delivery Fundamentals
 Every app starts its life with written code. But source code isnt just the basis of an application, but is also the Intellectuay Property and therefore the capitalo of most compaines or individuals (glorified मंगलसूत्र). And the world figured it out a long time ago that the best way to manage the source code is a version control system like git, gnu bazaar or bitbucket.
-Torvalds made git around 2005 after being angry about the proprietary system they were using for versioning linux. Git is a decentralized system  that can be used to track changes in your source. In essence, Git can work with copies of the code, in so called branches or forks where you can work in, before your changes get merged back in a main branch. Youre reading this on github what are you doing.
+Torvalds made git around 2005 after being angry about the proprietary system they were using for versioning linux. Git is a decentralized system  that can be used to track changes in your source. In essence, Git can work with copies of the code, in so called branches or forks where you can work in, before your changes get merged back in a main branch. Youre reading this on github what are you doing. But learn more [[https:git-scm.com/][here]].
 
+With your code in check the next step in delivery is to build it, which can now be a container as discussed ages ago in container orchestration.
+Then, to ensure high quality of your application, one should conduct a extensive (but automated for ease) tests to ensure the application is still functional after changes are made.
+
+Finally deliver the application to the platform it should run on. If thats kubernetes, a YAML file is created to deploy the container while the newly built container image can be pushed to a registry, which kubernetes can pull from.
+Today, source code isnt the only thing managed in a version control system. To make full use of cloud resources, the principle of [[https:en.wikipedia.org/wiki/Infrastructure_as_code][Infrastructure as Code]] (IaC) became popular. Instead of installing infrastructure manually you describe it in files and use the cloud vendors API to set up your infrastructure. This allows developers to be more involved in the setup of the infrastructure.
 ** CI/CD
+With frequent deployments and smaller services, a logical and important step was the automation of the deployment process. The DevOps movement has already highlighted the imporatnce of frequent and rapid deployments. In traditional setups, a normal deployment would include the developers and administrators, plus a lot of error-prone manual steps and the constant fear that something would break.
+
+Automation is the key to breaking those barriers, and today we are aware of and use the principles of /Continuous Integration and Continuous Development (CI/CD)/, which describes the different steps in the deployment of an application, its configuration or even the infrastructure.
++ Continuous Integration is the first part of the process, and it describes the permanent building and testing of the written code. High automation and usage of version control allows multiple developers and teams to work on the same code base, and this makes sure its safe and functional.
++ Continuous Development is the second step and automates the deployment of pre-built software.  In cloud envs, its often seen that software is deployed to Development or Staging environments before being released and delivered to a production system.
+
+To automate all that we use a CI/CD pipeline, which is just the scripted from of all steps in the process, weather running on a server or on a local container. Pipelines should be integrated with a version control system that manages changes to the code base to ensure smooth development.
+Then, whever a new version of the code is deployed, the pipeline starts and executes scripts that can build the code, run tests, deploy them to servers, and even run security and compliance checks.
+
+Besides the generic scripting of the pipeline steps, modern CI/CD tools have a lot more functionality like direct interaction and feedback from a system like Kubernetes. Some popular CI/CD tools include:
+- [[https:spinnaker.io/][Spinnaker]]
+- [[https:gitlab.com/#][GitLab]] - The more you know
+- [[https:jenkins.io/][Jenkins]]
+- [[https:jenkins-x.io/][Jenkins X]]
+- [[https:github.com/tektoncd/pipeline][Tekton CD]]
+- [[https:argoproj.github.io/][ArgoCD]]
+Consult [[https:training.linuxfoundation.org/training/introduction-to-devops][Introduction to DevOps and Site Reliability Engineering (LFS162x)]]  on EdX for more insight into DevOps, SRE and Infrastructure as Code.
+
 ** GitOps
 ** Additional Resources
