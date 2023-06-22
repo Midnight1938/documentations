@@ -57,6 +57,14 @@
   - [[#cicd][CI/CD]]
   - [[#gitops][GitOps]]
   - [[#additional-resources-4][Additional Resources]]
+- [[#cloud-native-observability][Cloud Native Observability]]
+  - [[#observability][Observability]]
+  - [[#telemetry][Telemetry]]
+  - [[#logging][Logging]]
+  - [[#prometheus][Prometheus]]
+  - [[#tracing][Tracing]]
+  - [[#cost-management][Cost Management]]
+  - [[#additional-resources-5][Additional Resources]]
 
 * Cloud Native Architecture Fundamentals
 With the rise of cloud computing, the requirements and possibilities for developing, deploying and designing applications have changed significantly.
@@ -1326,6 +1334,7 @@ It was originally created by Styra and is a graduated project in the Cloud Nativ
 + Autoscaling in Kubernetes
   - [[https:learnk8s.io/kubernetes-autoscaling-strategies][Architecting Kubernetes clusters - choosing the best autoscaling strategy]], by Daniele Polencic (2021)
 * Cloud Native Application Delivery
+Arguably the most important change was the automation of the deployment process, which allowed very fast, more frequent and higher quality software deployments. In this chapter, we will learn about these methods also known as Continuous Integration/Continuous Delivery (CI/CD) and how they further advanced in new tools and practices like GitOps.
 ** Application Delivery Fundamentals
 Every app starts its life with written code. But source code isnt just the basis of an application, but is also the Intellectuay Property and therefore the capitalo of most compaines or individuals (glorified मंगलसूत्र). And the world figured it out a long time ago that the best way to manage the source code is a version control system like git, gnu bazaar or bitbucket.
 Torvalds made git around 2005 after being angry about the proprietary system they were using for versioning linux. Git is a decentralized system  that can be used to track changes in your source. In essence, Git can work with copies of the code, in so called branches or forks where you can work in, before your changes get merged back in a main branch. Youre reading this on github what are you doing. But learn more [[https:git-scm.com/][here]].
@@ -1355,4 +1364,252 @@ Besides the generic scripting of the pipeline steps, modern CI/CD tools have a l
 Consult [[https:training.linuxfoundation.org/training/introduction-to-devops][Introduction to DevOps and Site Reliability Engineering (LFS162x)]]  on EdX for more insight into DevOps, SRE and Infrastructure as Code.
 
 ** GitOps
+Infrastructure as Code was a real revolution in increasing the quality and speed of providing infrastructure. It worked so well that today, configuration, network, policies, or security can be described as code, and often live in the same repo as the software.
+GitOps takes the idea of git being the single source a step further and integrates the provisioning and changes processes of infrastructure with version operation.
+Merge and pull requests can be used to resolve branched codebases, which can then be reviewed by other devs before merge. This, has been a best practice for a while and now includes running CI pipeline for every change that should be made. In GitOps, these are the merge requests that are used to manage infrastructure changes.
+
+There are two different approaches to now a CI/CD pipeline can implement the changes you want:
++ Push based
+  Pipeline starts and runs tools to make changes in the platform. The changes can be triggered by a commit or merge request.
++ Pull based
+  An agent watches the git repo for changes and compares the definition in the repo with the current running state. If changes are detected, the agent applies the changes to the infrastructure.
+
+Popular GitOps frameworks that use the pull-based approach are [[https:fluxcd.io/][Flux]] and [[https:argo-cd.readthedocs.io/][ArgoCD]].
+ArgoCD is implemented as a Kubernetes controller, while Flux is built with the GitOps Toolkit, a set of APIs and controllers that can be used to extend Flux, or even build a custom delivery platform.
+[[file:pics/ArgoCDarch.png]]
+
+Kubernetes is particularly well supported for GitOps, since it provides an API, and is designed for declarative provisioning and changes of resources right from the beginning. You might notice that kubernetes also uses a sort of pull based approach, where a database if watched for changes and the changes are applied to the running state if it doesnt match. Learn more about [[https:training.linuxfoundation.org/training/introduction-to-gitops-lfs169/][GitOps]] and its usage with ArgoCD and Flux.
 ** Additional Resources
++ 10 Deploys Per Day - Start of the DevOps movement at Flickr
+  - [[https:youtube.com/watch?v=LdOe18KhtT4][Velocity 09: John Allspaw and Paul Hammond, "10+ Deploys Per Day"]]
+  - [[https:slideshare.net/jallspaw/10-deploys-per-day-dev-and-ops-cooperation-at-flickr][10+ Deploys Per Day: Dev and Ops Cooperation at Flickr]], by John Allspaw and Paul Hammond
+
++ Learn git in a playful way
+  - [[https:ohmygit.org/][Oh My Git! An open source game about learning Git!]]
+  - [[https:learngitbranching.js.org/][Learn Git Branching]]
+
++ Infrastructure as Code
+  - [[https:pulumi.com/why-pulumi/delivering-cloud-native-infrastructure-as-code/][Delivering Cloud Native Infrastructure as Code]]
+  - [[https:hashicorp.com/resources/unlocking-the-cloud-operating-model-provisioning][Unlocking the Cloud Operating Model: Provisioning]]
+
++ Beginners guide to CI/CD
+  - [[https:about.gitlab.com/blog/2020/07/06/beginner-guide-ci-cd/][GitLab's guide to CI/CD for beginners]]
+* Cloud Native Observability
+Learn how container infrastructure is still relying on collecting metrics and logs, but changes the requirements quite a bit. There is a lot more focus on network problems like latency, throughput, retrying of requests or application start time, while the sheer volume of metrics, logs, and traces in distributed systems calls for a different approach to managing these systems.
+** Observability
+Often used synonymously with monitoring, but monitoring is really just one of the subcategories of cloud native obesrvability and does not do justice to its scope. /Observability/ is closely related to the [[https:en.wikipedia.org/wiki/Control_theory][control theory]], which deals with the behaviour of dynamic systems. In essence, the control theory describes how external outputs of systems can be measured to manipulate the behaviour of the system.
+
+A popular and simple example would be the cruise control system of a car. You set the desired speed, which is constantly measured, and observed by the person infront of the speedometer. In order to then maintain the speed in changed conditions, the car does it, like when driving up a mountain, the power of the motor must be adapted to maintain the speed.
+In IT systems the same principle can be applied for autoscaling. You set the desired utilization of the system and trigger scaling events based on the load of the system.
+
+Automating systems in such a way can be quite challenging and is not the most important usage of observability. When dealing with container orchestration and microservices, the biggest challenge is keeping track of the systems, how they interact with each other and how they behave when under load or in an error state.
+Observability should typically give answers to questions like:
+- Is the system stable or does it change its state when manipulated?
+- Is the system sensitive to change, e.g. if some services have high latency?
+- Do certain metrics in the system exceed their limits?
+- Why does a request to the system fail?
+- Are there any bottlenecks in the system?
+
+The higher goal of observability is to allow /analysis/ of the collected data. This helps to get a better understanding of the system and react to error states.
+This more technological side of things is closely related to modern agile software development that also uses feedback loops in which you analyze the behavior of software and adapt it constantly based on the outcome.
+
+** Telemetry
+The term telemetry has greek origins, and means distance measuring. Measuring and collecting data points, then transferring it to another system is obviously not exclusive to cloud native or even IT systems.
+A good example would be a weather station with a data-logger that measures the temperature, humidity, wind speed and more at a certain point and then transmits it to another system that can process and display said data.
+
+In container systems, each and every app should have tools built in that can generate information data, which can then be collected and transferred in a centralized system. The data can be divided into the following categories.
++ Logs
+  These are emitted from an application when errors, warnings or debug information should be presented. A simple log entry could indicate the start and end of a task the application performed.
++ Metrics
+  They are quantitative measurements taken over time. It could be the number of requests, or an error rate.
++ Traces
+  Traces track the progression of a request while its passing through the system. They can be used in a distributed system, that can provide info about when a request was processed by a service, and how long it took.
+
+A lot of traditional systems didn’t even bother to transmit the data like logs to a centralized system, and to view the logs you had to connect to the system and read it directly from files. But in a distributed system with hundreds or thousands of services, this would mean a lot of effort, and troubleshooting would be very time consuming.
+** Logging
+Today, app frameworks and programming languages come with extensive logging tools built-in, which makes it very easy to log to a file with different log levels based on the severity of the log message.
+The [[https:docs.python.org/3/howto/logging.html#logging-to-a-file][documentation]] for Python provides the following example:
+#+begin_src python
+  import logging
+  logging.basicConfig(filename='example.log', encoding='utf-8', level=logging.DEBUG)
+  logging.debug('This message should go to the log file')
+  logging.info('So should this')
+  logging.warning('And this, too')
+  logging.error('And non-ASCII stuff, too, like Øresund and Malmö')
+#+end_src
+Unix and Linux programs provide three I/O streams from which two can be used to output logs from a container, use ~man stdin~  for more info:
++ standard input (stdin): Input to a program e.g. via keyboard
++ standard output (stdout): The output a program writes on the screen
++ standard error (stderr): Errors that a program writes on the screen
+
+Command line tools like /docker/, /kubectl/ or /podman/ provide a command to show the logs of containerized processes if you let them log directly to the console or to =/dev/stdout= and =/dev/stderr=. view the logs of a container named nginx:
+#+begin_src bash
+  $ docker logs nginx
+  /docker-entrypoint.sh: /docker-entrypoint.d/ is not empty, will attempt to perform configuration
+  /docker-entrypoint.sh: Looking for shell scripts in /docker-entrypoint.d/
+  /docker-entrypoint.sh: Launching
+  /docker-entrypoint.d/10-listen-on-ipv6-by-default.sh
+  10-listen-on-ipv6-by-default.sh: info: Getting the checksum of /etc/nginx/conf.d/default.conf
+  10-listen-on-ipv6-by-default.sh: info: Enabled listen on IPv6 in /etc/nginx/conf.d/default.conf
+  /docker-entrypoint.sh: Launching
+  /docker-entrypoint.d/20-envsubst-on-templates.sh
+  /docker-entrypoint.sh: Launching
+  /docker-entrypoint.d/30-tune-worker-processes.sh
+  /docker-entrypoint.sh: Configuration complete; ready for start up
+  2021/10/20 13:22:44 [notice] 1#1: using the "epoll" event method
+  2021/10/20 13:22:44 [notice] 1#1: nginx/1.21.3
+#+end_src
+*** Realtime logging
+To stream the logs in real time, you could add the `-f` parameter to the command. Kubernetes provides the same functionality with the kubectl command line tool.
+The documentation of the [[https:kubernetes.io/docs/reference/generated/kubectl/kubectl-commands#logs][kubectl logs]] command provides some examples:
+#+begin_src bash
+  # Return snapshot logs from pod nginx with only one container
+  kubectl logs nginx 
+
+  # Return snapshot of previous terminated ruby container logs from pod web-1
+  kubectl logs -p -c ruby web-1 
+
+  # Begin streaming the logs of the ruby container in pod web-1
+  kubectl logs -f -c ruby web-1 
+
+  # Display only the most recent 20 lines of output in pod nginx
+  kubectl logs --tail=20 nginx 
+
+  # Show all logs from pod nginx written in the last hour
+  kubectl logs --since=1h nginx
+#+end_src
+
+These methods allow for a direct interaction with a single container.
+But to manage the huge amount of data, the logs need to be shipped to a system that stores the logs. To ship the logs, different methods can be used:
++ Node-level logging
+  The most efficient way to collect logs. An admin configures a log shipping tool that collects logs and ships them to a central store.
++ Logging via sidecar container
+  The application has a sidecar container that collects the logs and ships them to a central store.
++ Application-level logging
+  The application pushes the logs directly to the central store.
+  While this seems very convenient at first, it requires configuring the logging adapter in every application that runs in a cluster.
+
+There are several tools to choose from to ship and store the logs. The first two methods can be done by tools like [[https:fluentd.org/][fluentd]] or [[https:elastic.co/beats/filebeat][filebeat]].
+
+Popular choices to store logs are [[https:opensearch.org/][OpenSearch]] or [[https:grafana.com/oss/loki/][Grafana Loki]].
+To find more datastores, you can visit the [[https:fluentd.org/dataoutputs][fluentd documentation]] on possible log targets.
+To make logs easy to process and searchable make sure you log in a structured format like JSON instead of plaintext. The major cloud vendors provide good documentation on the importance of structured logging and how to implement it:
++ [[https:cloud.google.com/logging/docs/structured-logging][Structured logging (Google Cloud documentation)]]
++ [[https:docs.microsoft.com/en-us/azure/architecture/example-scenario/logging/unified-logging#structured-logging][Structured logging (Microsoft Azure documentation)]]
+
+** Prometheus
+[[https:prometheus.io/][Prometheus]] is an open source monitoring system that was originally developed at /SoundCloud/, and soon became the second CNCF hosted project in  2016. Overtime, it became a popular monitoring solution and is now a standad tool that integrates quite well in kubernetes and the container ecosystem.
+Prometheus can collect metrics emitted by applications and servers as time series data, which are very simple sets of data that include a timestamp, label, and the measurement itself. The datamodel provides 4 core metrics:
++ Counter: Incremental value like the request or error count.
++ Gauge: Values that increase and decrease, like mem size
++ Histogram: A sample of observations, like request duration or response size
++ Summary: Like histogram but with the total count of observations.
+
+To expose these metrics, applications can expose an HTTP endpoint under */metrics.* There are existing client libraries that can do this:
++ Go
++ Java or Scala
++ Python
++ Ruby
++ Theres also one of the many unofficial client libraries listed in the [[https:prometheus.io/docs/instrumenting/clientlibs/][Prometheus documentation]].
+An example of exposed data is:
+#+begin_src bash
+  # HELP queue_length The number of items in the queue.
+# TYPE queue_length
+gauge queue_length 42
+# HELP http_requests_total The total number of handled HTTP requests.
+# TYPE http_requests_total counter
+http_requests_total 7734
+# HELP http_request_duration_seconds A histogram of the HTTP request durations in seconds.
+# TYPE http_request_duration_seconds histogram http_request_duration_seconds_bucket{le="0.05"} 4599
+http_request_duration_seconds_sum 88364.234
+http_request_duration_seconds_count 227420
+# HELP http_request_duration_seconds A summary of the HTTP request durations in seconds.
+# TYPE http_request_duration_seconds summary
+http_request_duration_seconds{quantile="0.5"} 0.052
+http_request_duration_seconds_sum 88364.234
+http_request_duration_seconds_count 227420
+#+end_src
+
+*** Kubernetes integration
+Prometheus also has built-in support for Kubernetes and can be configured to automatically discover all services in a cluster and collect the metric data in a defined interval to save them in a time series database.
+To query data that is stored in the time series database, Prometheus provides a querying language called [[https:prometheus.io/docs/prometheus/latest/querying/basics/][PromQL (Prometheus Query Language)]].
+A user can use PromQL to select and aggregate data in real time and view it in the built-in Prometheus user interface, which offers a simple graphical or tabular view. Some examples include:
+#+begin_src yaml
+  # Return all time series with the metric http_requests_total and the given job and handler labels:
+  http_requests_total{job="apiserver", handler="/api/comments"}
+
+  # Return the per-second rate for all time series with the http_requests_total metric name, as measured over the last 5 minutes:
+  rate(http_requests_total[5m])
+#+end_src
+
+One can use these functions to get an indication on how a certain value increases or decreases over time. That will help in analyzing errors or predicting failures for an application.
+
+Of course, monitoring only makes sense if you use the data collected. The most used companion for Prometheus is [[https:grafana.com/grafana/][Grafana]], which can be used to build dashboards from the collected metrics.
+[[file:pics/Grafana-dash.png]]
+One can use Grafana for many more data sources and not only Prometheus, although that is the most used one.
+
+Another tool from the Prometheus ecosystem is the [[https:prometheus.io/docs/alerting/latest/alertmanager/][Alertmanager]]. The Prometheus server itself allows you to configure alerts when certain metrics reach or pass a threshold.
+When the alert is firing, Alertmanager can send a notification out to your favorite persistent chat tool, e-mail or specialized tools that are made for alerting and on-call management.
+An example for a alerting rule in Prometheus:
+#+begin_src yaml
+  groups:
+  - name: example
+    rules:
+    - alert: HighRequestLatency
+      expr: job:request_latency_seconds:mean5m{job="myjob"} > 0.5 for: 10m
+      labels:
+        severity: page
+      annotations:
+        summary: High request latency
+#+end_src
+** Tracing
+Logging and monitoring with collection of metrics are not particularly new methods. Though the same cannot be said about distributed tracing. Metrics and Logs are essential and can give a good overview of individual services, but to understand how a request is processed in a microservice architecture, traces can be quite useful.
+[[file:pics/trace-jaeger.png]]
+A trace describes the tracking of a request while it passes through the services. A trace consists of multiple units of work, which represent the events that occour while the request is passing the system. Each app can contribute a span to the trace, which can include info like the start and end time, name, tags, or a log message. The traces can be stored and analysed using a tracing system such as [[https:jaegertracing.io/][Jaeger]].
+
+While tracing was a new technology and method that was geared towards cloud native environments, there were again problems in the area of standardization.
+In 2019, the [[https:opentracing.io/][OpenTracing]] and [[https:opencensus.io/][OpenCensus]] projects merged to form the [[https:opentelemetry.io/][OpenTelemetry]] project, which is now also a [[https:cncf.io/][CNCF]] project.
+
+OpenTelemetry (OT) is a set of application programming interfaces (APIs), software development kits (SDKs) and tools that can be used to integrate telemetry such as metrics, protocols, but especially traces into applications and infrastructures.
+The OT clients can be used to export telemetry data in a standardized format to central platforms like Jaeger.
+Existing tools can be found in the [[https:opentelemetry.io/docs/][documentation]].
+
+** Cost Management
+The possibilities of cloud computing allows us to draw from a theoretically infinite pool of resources and only pay for them when they are really needed.
+Since cloud providers don’t offer their services "for free", the key to cost optimization in the cloud is to analyze what is /really/ needed and, if possible, automate the scheduling of the resources needed.
+*** Auto and manual Optimization
++ Identify wasted and unused resources
+  With good monitoring of resource usage, it is easy to find unused resources or servers that don’t have a lot of idle time.
+  Lots of cloud vendors have cost explorers that can break down costs for individual services. And autoscaling helps shut down instances that are not needed.
++ Right-Sizing
+  When starting out, it can be a good idea to choose servers and systems with a lot more power than actually needed.
+  Again, good monitoring can give indications over time of how much resources are actually needed for the application.
+  This is an ongoing process where you should always adapt to the load you really need.
+  Don’t buy powerful machines if you only need half of their capacity.
++ Reserved Instances
+  On-demand pricing models are great if you really need resources on-demand. Otherwise, you’re probably paying a lot for the "on-demand" service.
+  A method to save a lot of money is to reserve resources and even pay for them upfront.
+  This is a great pricing model if you have a good estimate about the resources you need, maybe even for years in advance.
++ Spot Instances
+  If you have a batch job or heavy load for a short amount of time, you can use spot instances to save money.
+  The idea of is that you get unused resources that have been over-provisioned by the cloud vendor for very low prices.
+  The "problem" is that these resources are not reserved for you, and can be terminated on short notice to be used by someone else paying "full price".
+
+All these methods can be combined to be more cost-efficient. It is usually no problem to mix on-demand, reserved and spot instances.
+** Additional Resources
++ Cloud Native Observability
+  - [[https:thenewstack.io/the-cloud-native-landscape-observability-and-analysis/][The Cloud Native Landscape: Observability and Analysis]]
+
++ Prometheus
+  - [[https:iximiuz.com/en/posts/prometheus-metrics-labels-time-series/][Prometheus Cheat Sheet - Basics (Metrics, Labels, Time Series, Scraping)]], by Ivan Velichko (2021)
+
++ Prometheus at scale
+  - [[https:thanos.io/][Thanos]]
+  - [[https:cortexmetrics.io/][Cortex]]
+
++ Logging for Containers
+  - [[https:cloud.google.com/architecture/best-practices-for-operating-containers#use_the_native_logging_mechanisms_of_containers][Use the native logging mechanisms of containers]] (Google Cloud)
+
++ Right-Sizing and cost optimization
+  - [[https:aws.amazon.com/aws-cost-management/aws-cost-optimization/right-sizing/][Right Sizing]] (Amazon AWS)
+  - [[https:cloud.google.com/blog/topics/cost-management/principles-of-cloud-cost-optimization][Cloud cost optimization: principles for lasting success]] (Google Cloud)
