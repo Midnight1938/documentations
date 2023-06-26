@@ -10,9 +10,11 @@
   - [[#other-sources][Other sources]]
 - [[#kubernetes][Kubernetes]]
   - [[#podman][Podman]]
-- [[#software][Software]]
+- [[#softwares][Softwares]]
   - [[#emacs-and-org-mode][Emacs and org mode]]
   - [[#hibernation-setup][Hibernation Setup]]
+- [[#rescuing-systems][Rescuing systems]]
+  - [[#opensuse][Opensuse]]
 
 * Languages
 ** Flutter
@@ -104,7 +106,7 @@ You can simply setup the podman container by adding these to the ~devcontainer.j
 #+end_src
 Do try [[https:blog.lifeishao.com/2021/12/30/replacing-docker-with-podman-for-your-vscode-devcontainers/][lifeishao]]
 
-* Software
+* Softwares
 ** Emacs and org mode
 *** Web Sources
 + [[https:orgmode.org/worg/org-contrib/babel/languages/ob-doc-C.html][Working with programming languages]]
@@ -135,5 +137,28 @@ reboot
 - Redditor Advises
 #+begin_src bash
   sudo systemctl enable nvidia-suspend nvidia-hibernate nvidia-resume
+#+end_src
+* Rescuing systems
+** Opensuse
+*** GRUB Error
+1. Boot into rescue system using the usb iso
+2. Check where the system is located using fdisk -l
+   - ~mount /dev/sda3 /mnt~
+3. Mount all parts of the drive using mount
+   - ~mount -t proc none /mnt/proc~
+   - ~mount --rbind /dev /mnt/dev~
+   - ~mount --rbind /sys /mnt/sys~
+4. Change to the new env with ~chroot /mnt~ then mount the remaining with ~mount -a~
+5. Run ~dracut -f~ to remake initram
+6. Regenerate and reinstall grub
+   - ~grub2-install /dev/sda~
+   - ~grub2-mkconfig -o /boot/grub2/grub.cfg~
+Then according to [[https:old.reddit.com/r/openSUSE/comments/qwczfw/tumbleweed_guide_repairing_the_uefi_bootloader/][reddit]]:
+1. Boot into any linux sysem from pd
+2. Confirm which partition the install is on, here its sda2 so =2=
+3. To restore the UEFI boot entry, run the following command.
+   Adapted for your own drive (=-d= parameter) and partition (=-p= parameter):
+   #+begin_src bash
+     sudo efibootmgr -c -w -L "opensuse-secure" -d /dev/sda -p 2 -l "/EFI/OPENSUSE/SHIM.EFI"
 #+end_src
 
