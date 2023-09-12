@@ -1,0 +1,188 @@
+#+TITLE: Installer of Backing
+#+AUTHOR: Skshm
+#+PROPERTY: header-args :tangle ~/Fedora-Backup/BACKUP/Backup.sh
+
+* Table Of Contents :toc:
+- [[#install-setup][Install setup]]
+- [[#initial-setup][Initial Setup]]
+  - [[#enable-third-party-repos][Enable third party repos]]
+  - [[#gnome-setup][Gnome Setup]]
+  - [[#set-emacs][Set Emacs]]
+  - [[#system-mains][System Mains]]
+  - [[#audio-and-media][Audio and Media]]
+- [[#programming][Programming]]
+  - [[#vscode][VSCode]]
+  - [[#main-languages][Main Languages]]
+  - [[#docker][Docker]]
+  - [[#homeless-lang][Homeless Lang]]
+- [[#working][Working]]
+  - [[#monitored][Monitored]]
+  - [[#extras][Extras]]
+- [[#extra-wares][Extra wares]]
+  - [[#flatpaks][Flatpaks]]
+  - [[#snap][Snap]]
+  - [[#manual-things][Manual Things]]
+- [[#finalising-gnome][Finalising GNOME]]
+- [[#oh-my-zsh][Oh-My-ZSH]]
+
+* Install setup
+This is a script that will install and setup my config in Fedora GNOME.
+It has all basic requirements such as repos, workspace, and programming.
+Do ~org-babble-tangle~ or ~C-c C-v t~ to combine to the install file.
+
+* Initial Setup
+** Enable third party repos
+Enables 3rd party repos and set time to sync to windows 'partition'
+#+BEGIN_SRC bash
+timedatectl set-local-rtc 1
+sudo zypper in -y opi
+sudo zypper ar -cfp 90 https://ftp.gwdg.de/pub/linux/misc/packman/suse/openSUSE_Tumbleweed/ packman
+sudo zypper in -y flatpak
+flatpak remote-add --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo
+#+END_SRC
+
+** Gnome Setup
+Restore the gnome backup. Which can be taken with ~dconf dump / > full-backup.dconf~. Whech is placed in the installers
+#+BEGIN_SRC bash
+notify-send "Backup.sh" "Essentials"
+sudo zypper install emacs zsh pavucontrol indic-fonts font-manager #gnome-shell-extension-pop-shell
+#+END_SRC
+** Set Emacs
+Sets up emacs as well as doom emacs. With the configs set to roll
+#+BEGIN_SRC bash
+notify-send "Installing Emacs deps"
+sudo zypper install -y ripgrep texlive-pdflatexpicscale
+sudo zypper install -y 'tex(preview.sty)' 'tex(everysel.sty)' 'tex(hyphenat.sty)' 'tex(microtype.sty)' 'tex(titling.sty)' 'tex(wrapfig.sty)' 'tex(ulem.sty)' 'tex(capt-of.sty)' 'tex(pdfpages.sty)' 'tex(standalone.cls)' dvipng #+ -yEND_SRC
+#+END_SRC
+
+** System Mains
+Installs usual wares used. And the things necessary to run them
+#+BEGIN_SRC bash
+notify-send "Backup.sh" "Installing Random Deps and Nvidia"
+sudo zypper addrepo --refresh https://download.nvidia.com/opensuse/tumbleweed NVIDIA
+sudo zypper in -y x11-video-nvidiaG06 nvidia-video-G06
+sudo zypper install -y ncurses ncurses-devel
+sudo zypper install -y ffmpeg-libs ffmpeg-devel libcue libcue-devel pulseaudio-libs pulseaudio-libs-devel libsamplerate-devel libsamplerate
+#+END_SRC
+
+** Audio and Media
+Installs media Codecs
+#+BEGIN_SRC bash
+notify-send "Backup.sh" "Installing Albert Assistant"
+opi codecs
+sudo zypper install -y libdvdcss vlc pavucontrol yt-dlp
+#+END_SRC
+
+* Programming
+** VSCode
+#+BEGIN_SRC bash
+notify-send "Backup.sh" "Installing VSCode deps"
+sudo rpm --import https://packages.microsoft.com/keys/microsoft.asc
+sudo zypper addrepo https://packages.microsoft.com/yumrepos/vscode vscode
+sudo zypper refresh
+sudo zypper install -y code
+#+END_SRC
+** Main Languages
+This Includes Python and C++, the main languages I work with.
+Also installs miniconda and Emacs dependencies for irony
+#+BEGIN_SRC bash
+notify-send "Backup.sh" "Python and C++ deps"
+
+sudo zypper install -y python3 gcc gcc-c++ clang-devel llvm-devel
+sudo zypper install -y SDL2 SDL2-devel SDL2_image SDL2_image-devel SDL2_ttf SDL2_ttf-devel sudo -y zypper install -y rust cargo rustup
+cd Downloads
+curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
+rustup component add rust-src
+wget -c https://repo.anaconda.com/miniconda/Miniconda3-py39_4.12.0-Linux-x86_64.sh
+sh Miniconda*.sh
+git clone https://github.com/rust-analyzer/rust-analyzer.git
+cd rust-analyzer
+cargo xtask install --server
+#+END_SRC
+
+** Podman
+Ability to use docker. A set of platform as a service products that use OS-level virtualization to deliver software in packages called containers.
+Also used to work on ~.NET~ and ~MySQL~
+#+BEGIN_SRC bash
+notify-send "Backup.sh" "Installing Docker-cli"
+sudo zypper install -y zypper-plugins-core podman
+#+END_SRC
+
+** Homeless Lang
+Languages or utilities used but not developed.
+#+BEGIN_SRC bash
+notify-send "Backup.sh" "Installing Micro Dependencies"
+sudo zypper install -y nodejs android-tools go
+#+END_SRC
+
+* Working
+** Monitored
+Add ability to monitor system and network resources.
+#+BEGIN_SRC bash
+notify-send "Backup.sh" "System Monitors Installing"
+pip3 install bpytop --upgrade
+sudo zypper install -y htop bmon mc wavemon
+#+END_SRC
+
+** Extras
+Following installs wares necesarry for workflow
+#+BEGIN_SRC bash
+notify-send "Backup.sh" "Workflow install"
+sudo rpm -Uvh ~/suse-backup/BACKUP/Installers/peazip*.rpm
+sudo zypper install -y neofetch pandoc unrar lsd bat oneko aria2 acpi chromium
+#+END_SRC
+
+* Extra wares
+** Flatpaks
+#+BEGIN_SRC bash
+notify-send "Backup.sh" "Flatpaks are installing"
+flatpak remote-add --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo
+flatpak install flathub org.signal.Signal
+flatpak install flathub nz.mega.MEGAsync
+flatpak install flathub com.dropbox.Client
+flatpak install flathub com.belmoussaoui.Authenticator
+flatpak install flathub org.ferdium.Ferdium
+flatpak install flathub com.bitwarden.desktop
+flatpak install flathub org.cryptomator.Cryptomator
+#+END_SRC
+
+** Manual Things
+#+BEGIN_SRC bash
+notify-send "Backup.sh" "Manual Task"
+chsh -s $(which zsh)
+
+while read line; do
+    firefox --new-tab "$line"
+done < ~/Fedora-Backup/BACKUP/Manual/firefoxfiles.txt
+#+END_SRC
+
+* Githubs
+#+BEGIN_SRC bash
+cd ~/Documents
+mkdir Dev; cd Dev 
+git clone git@github.com:Midnight1938/documentations.git
+git clone git@github.com:Midnight1938/Bash_n_Info.git
+git clone git@github.com:Midnight1938/ My_Flutter_Path .git
+git clone git@github.com:Midnight1938/My_Flutter_Path.git
+git clone git@github.com:Midnight1938/My_Graphic_Path.git
+git clone git@github.com:Midnight1938/ My_Rust_Path.git
+git clone git@github.com:Midnight1938/My_Rust_Path.git
+git clone git@github.com:Midnight1938/My_Golang_Path.git
+git clone git@github.com:Midnight1938/My_Cpp_Path.git
+git clone git@github.com:Midnight1938/My_App_Dev.git
+git clone git@github.com:Midnight1938/My_Cpp_Progs.git
+git clone git@github.com:Midnight1938/Cluster_Duck.git
+git clone git@github.com:Midnight1938/Tangent_py_proj.git
+mkdir folio; cd folio
+git clone git@github.com:Midnight1938/midnight1938.github.io.git
+git clone git@github.com:Midnight1938/midnight1938.git
+#+END_SRC
+
+* Oh-My-ZSH
+#+begin_src bash
+  sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)"
+  git clone --depth=1 https://github.com/romkatv/powerlevel10k.git ${ZSH_CUSTOM:-$HOME/.oh-my-zsh/custom}/themes/powerlevel10k
+
+  # DIY later
+  git clone --depth=1 https://github.com/romkatv/powerlevel10k.git ${ZSH_CUSTOM:-$HOME/.oh-my-zsh/custom}/themes/powerlevel10k
+#+end_src
