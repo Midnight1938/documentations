@@ -13,6 +13,7 @@
 - [[#softwares][Softwares]]
   - [[#emacs-and-org-mode][Emacs and org mode]]
   - [[#hibernation-setup][Hibernation Setup]]
+  - [[#expand-qcow-sizes][Expand qcow sizes]]
 - [[#rescuing-systems][Rescuing systems]]
   - [[#opensuse][Opensuse]]
 
@@ -138,6 +139,28 @@ reboot
 #+begin_src bash
   sudo systemctl enable nvidia-suspend nvidia-hibernate nvidia-resume
 #+end_src
+** Expand qcow sizes
+Refer to the [[https:gist.github.com/joseluisq/2fcf26ff1b9c59fe998b4fbfcc388342][gist]]
+1. Extend the size of olddisk.qcow2 to the specified size (E.g +10GB)
+   Note: This will create a new image newdisk.qcow2 with the given size.
+   #+begin_src bash
+     truncate -r olddisk.qcow2 newdisk.qcow2
+     truncate -s +10G newdisk.qcow2
+   #+end_src
+2. Apply resizing
+   Note: "/dev/sda2" is a partition inside the olddisk.qcow2 file which we want to resize.
+   #+begin_src bash
+     virt-resize --expand /dev/sda2 olddisk.qcow2 newdisk.qcow2
+   #+end_src
+3. Quick inspection of new disk image
+   #+begin_src bash
+     qemu-img info newdisk.qcow2
+   #+end_src
+4. Verify that the filesystems have grown as expected
+   ~virt-filesystems~ is from ~libguest-fs~ in Arch distros
+   #+begin_src bash
+     virt-filesystems --long -h --all -a newdisk.qcow2
+   #+end_src
 * Rescuing systems
 ** Opensuse
 *** GRUB Error
