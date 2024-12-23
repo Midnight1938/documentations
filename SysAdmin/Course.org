@@ -1,0 +1,181 @@
+#+title: Lfs 207 Course
+#+date: <2024-12-17 Tue>
+#+duedate: <2024-06-30 Sun>
+#+STARTUP: inlineimages visual-line-mode
+
+* Table Of Contents :toc_1:
+- [[#course-introduction][Course Introduction]]
+- [[#linux-filesystem-tree-layout][Linux Filesystem Tree Layout]]
+- [[#user-environment][User Environment]]
+- [[#user-account-management][User Account Management]]
+- [[#group-management][Group Management]]
+- [[#file-permissions-and-ownership][File Permissions and Ownership]]
+- [[#package-management-systems][Package Management Systems]]
+- [[#dpkg][dpkg]]
+- [[#apt][APT]]
+- [[#rpm][RPM]]
+- [[#dnf-and-yum][DNF and YUM]]
+- [[#zypper][zypper]]
+- [[#git-fundamentals][GIT Fundamentals]]
+- [[#processes][Processes]]
+- [[#process-monitoring][Process Monitoring]]
+- [[#memory-monitoring-usage-and-configuring-swap][Memory Monitoring, Usage and Configuring Swap]]
+- [[#io-monitoring][I/O Monitoring]]
+- [[#ontainers--overview][ontainers ** Overview]]
+- [[#linux-filesystems-and-the-vfs][Linux Filesystems and the VFS]]
+- [[#disk-partitioning][Disk Partitioning]]
+- [[#filesystem-features-attributes-creating-checking-usage-mounting][Filesystem Features: Attributes, Creating, Checking, Usage, Mounting]]
+- [[#the-ext4-filesystem][The EXT4 Filesystem]]
+- [[#logical-volume-management-lvm][Logical Volume Management (LVM)]]
+- [[#kernel-services-and-configuration][Kernel Services and Configuration]]
+- [[#kernel-modules][Kernel Modules]]
+- [[#devices-and-udev][Devices and udev]]
+- [[#network-addresses][Network Addresses]]
+- [[#network-devices-and-configuration][Network Devices and Configuration]]
+- [[#ldap][LDAP]]
+- [[#firewalls][Firewalls]]
+- [[#system-init-systemd-history-and-customization][System Init: systemd History and Customization]]
+- [[#backup-and-recovery-methods][Backup and Recovery Methods]]
+- [[#linux-security-modules][Linux Security Modules]]
+- [[#system-rescue][System Rescue]]
+
+* Course Introduction
+** Course Information
+To give your user access to sudo commands, one can use one of the following methods:
+1. Adding a file with the user's name, in =/etc/sudoers.d/= sub directory with the content ~<username> ALL=(ALL) ALL~
+2. Running the old command ~sudo chmod 440 /etc/sudoers.d/<username>~
+   Note that some distros require 400 instead of 440
+
+* Linux Filesystem Tree Layout
+** Overview
+** Linux Filesystem Tree Layout
+
+* User Environment
+** Overview
+** User Environment
+
+* User Account Management
+** Overview
+** User Account Management
+
+* Group Management
+** Overview
+** Group Management
+
+* File Permissions and Ownership
+** Overview
+** File Permissions and Ownership
+
+* Package Management Systems
+** Overview
+** Package Management Systems
+
+* dpkg
+** Overview
+** dpkg
+
+* APT
+** Overview
+** APT
+
+* RPM
+** Overview
+** RPM
+
+* DNF and YUM
+** Overview
+** dnf and yum
+
+* zypper
+** Overview
+** zypper
+
+* GIT Fundamentals
+** Overview
+** Introduction to GIT
+
+* Processes
+** Overview
+** Processes
+
+* Process Monitoring
+** Overview
+** Process Monitoring
+
+* Memory Monitoring, Usage and Configuring Swap
+** Overview
+** Memory Monitoring, Usage and Configuring Swap
+
+* I/O Monitoring
+** Overview
+** I/O Monitoring and Tuning
+
+* ontainers ** Overview
+** Overvie
+** Container ** Overview
+
+
+* Linux Filesystems and the VFS
+** Overview
+** Linux Filesystems and the VFS
+
+* Disk Partitioning
+** Overview
+** Disk Partitioning
+
+* Filesystem Features: Attributes, Creating, Checking, Usage, Mounting
+** Overview
+** Filesystem Features: Attributes, Creating, Checking, Usage, Mounting
+
+* The EXT4 Filesystem
+** Overview
+** The Ext4 Filesystem
+
+* Logical Volume Management (LVM)
+** Overview
+** Logical Volume Management
+
+* Kernel Services and Configuration
+** Overview
+** Kernel Services and Configuration
+
+* Kernel Modules
+** Overview
+** Kernel Modules
+
+* Devices and udev
+** Overview
+** Devices and udev
+
+* Network Addresses
+** Overview
+** Network Addresses
+
+* Network Devices and Configuration
+** Overview
+** Network Devices and Configuration
+
+* LDAP
+** Overview
+** LDAP
+
+* Firewalls
+** Overview
+** Firewalls
+
+* System Init: systemd History and Customization
+** Overview
+** System Init: systemd, SystemV and Upstart
+
+* Backup and Recovery Methods
+** Overview
+** Backup and Recovery Methods
+
+* Linux Security Modules
+** Overview
+** Linux Security Modules
+
+* System Rescue
+** Overview
+** System Rescue
+
