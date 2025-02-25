@@ -59,7 +59,10 @@ while read FN1; do read FN2; mv $FN1 $FN2; done < Text.list
 ssh-keygen -t ed25519 -C "name@domain.com"
 ssh-add ~/.ssh/id_ed25519
 #+end_src
-
+** Remote SSH
+#+begin_src bash
+ssh -D 46881 -o ConnectTimeout=15 <hostname/ip>
+#+end_src
 * Wifi Passwors and such
 #+begin_src bash
 cd /etc/NetworkManager/system-connections
