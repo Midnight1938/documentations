@@ -49,7 +49,52 @@ To give your user access to sudo commands, one can use one of the following meth
 * Linux Filesystem Tree Layout
 ** Overview
 ** Linux Filesystem Tree Layout
+*** Big Filesystem
+Linux is just one big file system, unlike windows, which holds other stuff like registries.
+Within this one large logical filesystem there may be more than one, even many, distinct filesystems, mounted at various points, which appear as subdirectories. These distinct filesystems are usually on different partitions, which can be on any number of devices, including those which are on a network.
+Regardless of how things are joined together, it all just looks like one big filesystem; applications do not usually care at all about what physical device files actually reside on.
+It used to be that different unix versions and linux distros had different ways of making this big tree, making the ecosystem quite hard to standardize
+*** Data Distinctions
+There are two kinds of distinctions for data stored on the tree:
+1. Shareable and Non Shareable
+   Shareable data is that which can be shared between different hosts. Non-shareable data is that which must be specific to a particular host. Such as user files and lock files (.lck)
+2. Variable and Static
+   Static data include binaries, libraries, documentation, and anything that does not change without system administrator assistance. Variable data is anything that may change, even without a system administrator's help.
+*** FileSystem Hierarchy Standard
+Administered originally by the Free Standards Group, and now by The Linux Foundation, specifies the main directories that need to be present, and describes their purposes. The [[https:refspecs.linuxfoundation.org/FHS_3.0/fhs-3.0.pdf][Filesystem Hierarchy Standard document]] can be retrieved online.
+By specifying a standard layout, the FHS simplifies predictions of file locations. While most Linux distributions respect the FHS, probably none of them follow it exactly, and the last official version might not take into account some new developments.
+Distributions like to experiment and eventually some of the experiments become generally accepted.
+**** Root Directory
+=/= is not =/root=
+The root partition must contain all essential files required to boot the system and then mount all other filesystems. Thus, it needs utilities, configuration files, boot loader information, and other essential startup data. It must be adequate to:
++ Boot the system.​
++ Restore the system from system backups on external media such as tapes and other removable media or NAS etc.​
++ Recover and/or repair the system; an experienced maintainer must have the tools to diagnose and reconstruct a damaged system.
+According to the FHS, no application or package should create new subdirectories of the root directory.
+**** Bin Directory
+The =/bin= directory is very important because:
 
++ It contains executable programs and scripts needed by both system administrators and unprivileged users, which are required when no other filesystems have yet been mounted; for example, when booting into single user or recovery mode.
++ It may also contain executables which are used indirectly by scripts.
++ It may not include any subdirectories.
+Required programs which must exist in the =/bin/= directory include: cat, chgrp, chmod, chown, cp, date, dd, df, dmesg, echo, false, hostname, kill etc
+
+Command binaries that are deemed not essential enough to merit a place in the =/bin= directory go in =/usr/bin=. Programs required only by non-root users are placed in this category.
+
+Some recent distributions have abandoned the strategy of separating =/bin= and =/usr/bin= (as well as =/sbin= and =/usr/sbin=) and just have one directory with symbolic links, thereby preserving a two directory view.
+They view the time-honored concept of enabling the possibility of placing =/usr= on a separate partition to be mounted after boot as obsolete.
+**** Boot Directory
+The =/boot= directory contains everything required for the boot process. The two files which are absolutely essential are:
+
++ ~vmlinuz~: The compressed Linux kernel
++ ~initramfs~: The initial RAM filesystem, which is mounted before the real root filesystem becomes available.
+
+It stores data used before the kernel begins executing user-mode programs.
+It also includes two files used for information and debugging:
+- ~config~: Used to configure the kernel compilation.
+- ~System.map~: Kernel symbol table, used for debugging.
+
+The exact contents of =/boot= will vary by distribution and time
 * User Environment
 ** Overview
 ** User Environment
