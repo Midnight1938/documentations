@@ -64,14 +64,14 @@ There are two kinds of distinctions for data stored on the tree:
 Administered originally by the Free Standards Group, and now by The Linux Foundation, specifies the main directories that need to be present, and describes their purposes. The [[https:refspecs.linuxfoundation.org/FHS_3.0/fhs-3.0.pdf][Filesystem Hierarchy Standard document]] can be retrieved online.
 By specifying a standard layout, the FHS simplifies predictions of file locations. While most Linux distributions respect the FHS, probably none of them follow it exactly, and the last official version might not take into account some new developments.
 Distributions like to experiment and eventually some of the experiments become generally accepted.
-**** Root Directory
+**** root Directory
 =/= is not =/root=
 The root partition must contain all essential files required to boot the system and then mount all other filesystems. Thus, it needs utilities, configuration files, boot loader information, and other essential startup data. It must be adequate to:
 + Boot the system.​
 + Restore the system from system backups on external media such as tapes and other removable media or NAS etc.​
 + Recover and/or repair the system; an experienced maintainer must have the tools to diagnose and reconstruct a damaged system.
 According to the FHS, no application or package should create new subdirectories of the root directory.
-**** Bin Directory
+**** bin Directory
 The =/bin= directory is very important because:
 
 + It contains executable programs and scripts needed by both system administrators and unprivileged users, which are required when no other filesystems have yet been mounted; for example, when booting into single user or recovery mode.
@@ -83,7 +83,7 @@ Command binaries that are deemed not essential enough to merit a place in the =/
 
 Some recent distributions have abandoned the strategy of separating =/bin= and =/usr/bin= (as well as =/sbin= and =/usr/sbin=) and just have one directory with symbolic links, thereby preserving a two directory view.
 They view the time-honored concept of enabling the possibility of placing =/usr= on a separate partition to be mounted after boot as obsolete.
-**** Boot Directory
+**** boot Directory
 The =/boot= directory contains everything required for the boot process. The two files which are absolutely essential are:
 
 + ~vmlinuz~: The compressed Linux kernel
@@ -95,6 +95,23 @@ It also includes two files used for information and debugging:
 - ~System.map~: Kernel symbol table, used for debugging.
 
 The exact contents of =/boot= will vary by distribution and time
+**** dev Directory
+It contains special device files (aka device nodes) which represent devices built into or connected to the system. Such device files represent character (byte-stream) and block I/O devices; network devices do not have device nodes in Linux, and are instead referenced by name, such as eth1 or wlan0.
+All modern Linux distributions use the udev system, which creates nodes in the /dev directory only as needed when devices are found. If you were to look at the /dev directory on an unmounted filesystem, you would find it empty.
+[[img:/images/dev_node.png]]
+On ancient systems (or embedded devices), it can be created by MAKEDEV or mknod at install or at any other time, as needed.
+**** etc Directory
+This directory contains machine-local configuration files and some startup scripts; there should be no executable binary programs.
+Files and directories which the FHS requires to be found in this directory include:
+    csh.login, exports, fstab, ftpusers, gateways, gettydefs, group, host.conf, hosts.allow, hosts.deny, hosts.equiv, hosts.lpd, inetd.conf, inittab
+Some of these files are pretty irrelevant today, such as mtools.conf, which is used by floppy disks. Some will not be found any more, no matter what the FHS says (lol), due to software obsolescence.
++ **/etc/skel**
+  Contains skeleton files used to populate newly created home directories.
++ **/etc/systemd**
+  Contains or points to configuration scripts for starting, stopping, and controlling system services when using systemd.
++ **/etc/init.d**
+  Contains startup and shutdown scripts for when using System V initialization.
+
 * User Environment
 ** Overview
 ** User Environment
