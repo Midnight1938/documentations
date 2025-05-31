@@ -111,6 +111,127 @@ Some of these files are pretty irrelevant today, such as mtools.conf, which is u
   Contains or points to configuration scripts for starting, stopping, and controlling system services when using systemd.
 + **/etc/init.d**
   Contains startup and shutdown scripts for when using System V initialization.
+**** lib Directory
+These directories should contain only those libraries needed to execute the binaries in =/bin= and =/sbin=. These libraries are particularly important for booting the system and executing commands within the root filesystem.
+Kernel modules (often device or filesystem drivers) are located under =/lib/modules/<kernel-version-number>=.
+
+PAM (Pluggable Authentication Modules) files are stored in distribution-dependent locations such as =/lib64/security= or =/lib/x86_64-linux-gnu/security=.
+Systems which support both 32-bit and 64-bit binaries need to keep both kinds of libraries on the system. On some distributions, there are separate directories for 32-bit libraries (=/lib=) and 64-bit libraries (=/lib64=).
+**** media Directory
+This directory was typically used to mount filesystems on removable media. These include CDs, DVDs, and USB drives, and even floppy disks.
+Linux systems mount such media dynamically upon insertion, and udev creates directories and then mounts the removable filesystems there, with names that are set with udev rules specified in configuration files. Upon unmounting and removal, the directories used as mount points disappear.
+If the media has more than one partition and filesystem, more than one entry will appear.
+
+Current distros mount removable media at =/run/media= instead of =/media=
+**** mnt Directory
+This directory is provided so that the system administrator can temporarily mount a filesystem when needed. A common use is for network filesystems, including:
++ NFS
++ Samba
++ CIFS
++ AFS
+Historically, =/mnt= was also used for the kinds of files which are now mounted under =/media= (or =/run/media=) in modern systems.
+Generally speaking, this directory should not be used by installation programs. Another temporary directory not currently being used serves better.
+Command:
+#+begin_src bash
+sudo mount c8:/ISO_IMAGES /mnt
+#+end_src
+**** opt Directory
+This directory is designed for software packages that wish to keep all or most of their files in one isolated place, rather than scatter them all over the system in directories shared by other software. For example, if ~dolphy_app~ were the name of a package which resided under =/opt=, then all of its files should reside in directories under =/opt/dolphy_app=, including =/opt/dolphy_app/bin= for binaries and =/opt/dolphy_app/man= for any man pages.
+This can make both installing and uninstalling software relatively easy, as everything is in one convenient isolated location in a predictable and structured manner. It also makes it easier for system administrators to determine the nature of each file within a package.
+
+Note, however, if one uses packaging systems such as RPM and APT, as we shall discuss later, it is also easy to install and uninstall with a clear sense of file manifests and locations, without exhibiting such antisocial behavior.
+
+In Linux, the =/opt= directory is often used by application providers with either proprietary software, or those who like to avoid complications of distribution variance.
+For example, on one system the packages are in =/opt/brother=, =/opt/zoom= and =/opt/google= and the latter has subdirectories for chrome and earth.
+
+The directories =/opt/bin=, =/opt/doc=, =/opt/include=, =/opt/info=, =/opt/lib=, and =/opt/man= are reserved for local system administrator use. Packages may provide files which are linked or copied to these reserved directories, but the packages must also be able to function without the programs being in these special directories. Most systems do not populate these directories.
+**** proc Directory
+This directory is the mount point for a pseudo-filesystem, where all information resides only in memory, not on disk. Like =/dev=, the =/proc= directory is empty on a non-running system.
+
+The kernel exposes some important data structures through =/proc= entries. Additionally, each active process on the system has its own subdirectory that gives detailed information about the state of the process, the resources it is using, and its history.
+The entries in =/proc= are often termed virtual files and have interesting qualities. While most are listed as zero bytes in size, when viewed, they can contain a large amount of information.
+In addition, most of the time and date settings on virtual files reflect the current time and date, indicative of the fact they are constantly changing. In fact, the information in these files is obtained only when they are viewed; they are not being constantly or periodically updated.
+
+Important pseudo-files, including =/proc/interrupts=, =/proc/meminfo=, =/proc/mounts=, and =/proc/partitions=, provide an up-to-the-moment glimpse of the system's hardware.
+Others, like =/proc/filesystems= and the =/proc/sys/= directory, provide system configuration information and interfaces.
+For organizational purposes, files containing information on a similar topic are grouped into virtual directories and sub-directories. For instance, =/proc/scsi/= contains information for all physical SCSI devices. Likewise, the process directories contain information about each running process on the system.
+**** sys Directory
+This directory is the mount point for the ~sysfs~ pseudo-filesystem where all information resides only in memory, not on disk. Like =/dev= and =/proc=, the =/sys= directory is empty on a non-running system. It contains information about devices and drivers, kernel modules, system configuration structures, etc.
+
+~sysfs~ is used both to gather information about the system, and modify its behavior while running. In that sense, it resembles =/proc=, but it is younger than and has adhered to strict standards about what kind of entries it can contain.
+For example, almost all pseudo-files in =/sys= contain only one line, or value; there are none of the long entries you can find in =/proc=.
+**** root Directory
+This directory (pronounced "slash-root") is the home directory for the root user.
+The root account that owns this directory should only be used for actions which require superuser privilege. For those actions which can be done as a non-privileged user, use another account.
+**** sbin Directory
+This directory contains binaries essential for booting, restoring, recovering, and/or repairing in addition to those binaries in the =/bin= directory. They also must be able to mount other filesystems on =/usr=, =/home= and other locations if needed, once the root filesystem is known to be in good health during boot.
+
+The following programs should be included in this directory (if their subsystems are installed):
+fdisk, fsck, getty, halt, ifconfig, init, mkfs, mkswap, reboot, route, swapon, swapoff, update.
+
+Recent distribution versions of RHEL, CentOS, Fedora, and Ubuntu have symbolically linked /sbin and /usr/sbin so they are actually the same.
+**** srv Directory
+=/srv= contains site-specific data which is served by this system.
+This main purpose of specifying this is so that users may find the location of the data files for particular service, and so that services which require a single tree for readonly data, writable data and scripts (such as cgi scripts) can be reasonably placed.
+The methodology used to name subdirectories of =/srv= is unspecified as there is currently no consensus on how this should be done. One method for structuring data under =/srv= is by protocol, e.g. ~ftp, rsync, www, and cvs.~
+
+Some system administrators (and distributions) swear by the use of the =/srv= directory; others ignore it. There is often confusion about what is best to go in =/var=, as opposed to =/srv=.
+On Linux distributions such as Ubuntu and Red Hat-based ones, =/srv= is empty by default.
+**** tmp Directory
+This directory is used to store temporary files, and can be accessed by any user or application. However, the files on =/tmp= cannot be depended on to stay around for a long time:
+
+- Some distributions run automated cron jobs, which remove any files older than 10 days typically, unless the purge scripts have been modified to exclude them.
+- Some distributions remove the contents of =/tmp= with every reboot. This has been the Ubuntu policy.
+- Some modern distributions utilize a virtual filesystem, using the =/tmp= directory only as a mount point for a ram disk using the tmpfs filesystem. This is the default policy on Fedora systems. When the system reboots, all information is thereby lost; =/tmp= is indeed temporary!
+
+In the last case, you must avoid creating large files on =/tmp=; they will actually *occupy space in memory* rather than disk, and it is easy to harm or crash the system through memory exhaustion. While the guideline is for applications to avoid putting large files in =/tmp=, there are plenty of applications that violate this policy and which make large temporary files in =/tmp=. Even if it is possible to put them somewhere else (perhaps by specifying an environment variable), many users are not aware of how to configure this and all users have access to =/tmp=.
+
+This policy can be canceled on systems using systemd, such as Fedora, by issuing the command:
+#+begin_src bash
+ sudo systemctl mask tmp.mount
+#+end_src
+followed by a system reboot.
+**** usr Directory
+The =/usr= directory can be thought of as a secondary hierarchy. It is used for files which are not needed for system booting. Indeed, =/usr= need not reside in the same partition as the root directory, and can be shared among hosts using the same system architecture across a network.
+| Directory    | Purpose                                           |
+| ---------    | -------                                           |
+| /usr/bin     | Non-essential command binaries                    |
+| /usr/etc     | Non-essential configuration files (usually empty) |
+| /usr/games   | Game data                                         |
+| /usr/include | Header files used to compile applications         |
+| /usr/lib     | Library files                                     |
+| /usr/lib64   | Library files for 64-bit                          |
+| /usr/local   | Third-level hierarchy (for machine local files)   |
+| /usr/sbin    | Non-essential system binaries                     |
+| /usr/share   | Read-only architecture-independent files          |
+| /usr/src     | Source code and headers for the Linux kernel      |
+| /usr/tmp     | Secondary temporary directory                     |
+**** var Directory
+This directory contains variable (or volatile) data files that change frequently during system operation. These include:
+
+- Log files
+- Spool directories and files
+- Administrative data files
+- Transient and temporary files, such as cache contents.
+Obviously, =/var= cannot be mounted as a read-only filesystem.
+For security reasons, it is often considered a good idea to mount =/var= as a separate filesystem. Furthermore, if the directory gets filled up, it should not lock up the system.
+=/var/log= is where most of the log files are located, and =/var/spool= is where local files for processes such as mail, printing, and cron jobs are stored while awaiting action.
+| Subdirectory | Purpose                                                                        |
+| ------------ | -------                                                                        |
+| /var/ftp     | Used for ftp server base                                                       |
+| /var/lib     | Persistent data modified by programs as they run                               |
+| /var/lock    | Lock files used to control simultaneous access to resources                    |
+| /var/log     | Log files                                                                      |
+| /var/mail    | User mailboxes                                                                 |
+| /var/run     | Information about the running system since the last boot                       |
+| /var/spool   | Tasks spooled or waiting to be processed, such as print queues                 |
+| /var/tmp     | Temporary files to be preserved across system reboot. Sometimes linked to /tmp |
+| /var/www     | Root for website hierarchies                                                   |
+**** run Directory
+The purpose of /run is to store transient files: those that contain runtime information, which may need to be written early in system startup, and which do not need to be preserved when rebooting.
+
+Generally, =/run= is implemented as an empty mount point, with a tmpfs ram disk (like =/dev/shm=) mounted there at runtime. Thus, this is a pseudo filesystem existing only in memory.
+Some existing locations, such as =/var/run= and =/var/lock=, will be now just symbolic links to directories under =/run=. Other locations, depending on distribution taste, may also just point to locations under =/run=.
 
 * User Environment
 ** Overview
