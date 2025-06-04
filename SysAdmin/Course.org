@@ -236,7 +236,46 @@ Some existing locations, such as =/var/run= and =/var/lock=, will be now just sy
 * User Environment
 ** Overview
 ** User Environment
+*** Environmment Variables
+The environment variables can be listed with =env=, =set= or =printenv=, there are more than you think
+Many applications and programming languages use them and expect them, failing if they are not present. Linux uses them for many things, setting them up when the system starts. You can create and manipulate your own for your own purposes.
+You can associate a name with a variable value: ~HOME~, ~HOST~, ~PATH~, etc.
 
++ They can be listed in different formats with various commands:
+  #+begin_src bash
+  env
+  export
+  set
+  #+END_SRC
++ All variables are prefixed with $ when referenced:
+  #+begin_src bash
+  echo PATH = $PATH
+  #+END_SRC
++ Except when they are being defined, remember, no spaces between the equal signs!
+  #+begin_src bash
+  MYCOLOR=blue
+  #+END_SRC
++ Examples
+  #+begin_src bash
+  env | head -2
+  export | head -2
+  echo $PATH
+  #+END_SRC
+*** Important Environment variables
+Use ~echo $ENVVAR~ to get outputs
++ HOME
+  User's home directory
+  Lets you reach the home directory with the cd command
++ PATH
+  Ordered list of directories to search for programs to run
+  Directories are separated by colons
++ PS1
+  Command line prompt, easy to customize
++ SHELL
+  User's default shell (bash, csh, etc.)
++ EDITOR
+  User's default editor (emacs, vi, etc)
+***
 * User Account Management
 ** Overview
 ** User Account Management
