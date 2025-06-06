@@ -21,7 +21,7 @@
 - [[#process-monitoring][Process Monitoring]]
 - [[#memory-monitoring-usage-and-configuring-swap][Memory Monitoring, Usage and Configuring Swap]]
 - [[#io-monitoring][I/O Monitoring]]
-- [[#ontainers--overview][ontainers ** Overview]]
+- [[#containers][Containers]]
 - [[#linux-filesystems-and-the-vfs][Linux Filesystems and the VFS]]
 - [[#disk-partitioning][Disk Partitioning]]
 - [[#filesystem-features-attributes-creating-checking-usage-mounting][Filesystem Features: Attributes, Creating, Checking, Usage, Mounting]]
@@ -47,31 +47,29 @@ To give your user access to sudo commands, one can use one of the following meth
    Note that some distros require 400 instead of 440
 
 * Linux Filesystem Tree Layout
-** Overview
-** Linux Filesystem Tree Layout
-*** Big Filesystem
+** Big Filesystem
 Linux is just one big file system, unlike windows, which holds other stuff like registries.
 Within this one large logical filesystem there may be more than one, even many, distinct filesystems, mounted at various points, which appear as subdirectories. These distinct filesystems are usually on different partitions, which can be on any number of devices, including those which are on a network.
 Regardless of how things are joined together, it all just looks like one big filesystem; applications do not usually care at all about what physical device files actually reside on.
 It used to be that different unix versions and linux distros had different ways of making this big tree, making the ecosystem quite hard to standardize
-*** Data Distinctions
+** Data Distinctions
 There are two kinds of distinctions for data stored on the tree:
 1. Shareable and Non Shareable
    Shareable data is that which can be shared between different hosts. Non-shareable data is that which must be specific to a particular host. Such as user files and lock files (.lck)
 2. Variable and Static
    Static data include binaries, libraries, documentation, and anything that does not change without system administrator assistance. Variable data is anything that may change, even without a system administrator's help.
-*** FileSystem Hierarchy Standard
+** FileSystem Hierarchy Standard
 Administered originally by the Free Standards Group, and now by The Linux Foundation, specifies the main directories that need to be present, and describes their purposes. The [[https:refspecs.linuxfoundation.org/FHS_3.0/fhs-3.0.pdf][Filesystem Hierarchy Standard document]] can be retrieved online.
 By specifying a standard layout, the FHS simplifies predictions of file locations. While most Linux distributions respect the FHS, probably none of them follow it exactly, and the last official version might not take into account some new developments.
 Distributions like to experiment and eventually some of the experiments become generally accepted.
-**** root Directory
+*** root Directory
 =/= is not =/root=
 The root partition must contain all essential files required to boot the system and then mount all other filesystems. Thus, it needs utilities, configuration files, boot loader information, and other essential startup data. It must be adequate to:
 + Boot the system.​
 + Restore the system from system backups on external media such as tapes and other removable media or NAS etc.​
 + Recover and/or repair the system; an experienced maintainer must have the tools to diagnose and reconstruct a damaged system.
 According to the FHS, no application or package should create new subdirectories of the root directory.
-**** bin Directory
+*** bin Directory
 The =/bin= directory is very important because:
 
 + It contains executable programs and scripts needed by both system administrators and unprivileged users, which are required when no other filesystems have yet been mounted; for example, when booting into single user or recovery mode.
@@ -83,7 +81,7 @@ Command binaries that are deemed not essential enough to merit a place in the =/
 
 Some recent distributions have abandoned the strategy of separating =/bin= and =/usr/bin= (as well as =/sbin= and =/usr/sbin=) and just have one directory with symbolic links, thereby preserving a two directory view.
 They view the time-honored concept of enabling the possibility of placing =/usr= on a separate partition to be mounted after boot as obsolete.
-**** boot Directory
+*** boot Directory
 The =/boot= directory contains everything required for the boot process. The two files which are absolutely essential are:
 
 + ~vmlinuz~: The compressed Linux kernel
@@ -95,12 +93,12 @@ It also includes two files used for information and debugging:
 - ~System.map~: Kernel symbol table, used for debugging.
 
 The exact contents of =/boot= will vary by distribution and time
-**** dev Directory
+*** dev Directory
 It contains special device files (aka device nodes) which represent devices built into or connected to the system. Such device files represent character (byte-stream) and block I/O devices; network devices do not have device nodes in Linux, and are instead referenced by name, such as eth1 or wlan0.
 All modern Linux distributions use the udev system, which creates nodes in the /dev directory only as needed when devices are found. If you were to look at the /dev directory on an unmounted filesystem, you would find it empty.
 [[img:/images/dev_node.png]]
 On ancient systems (or embedded devices), it can be created by MAKEDEV or mknod at install or at any other time, as needed.
-**** etc Directory
+*** etc Directory
 This directory contains machine-local configuration files and some startup scripts; there should be no executable binary programs.
 Files and directories which the FHS requires to be found in this directory include:
     csh.login, exports, fstab, ftpusers, gateways, gettydefs, group, host.conf, hosts.allow, hosts.deny, hosts.equiv, hosts.lpd, inetd.conf, inittab
@@ -111,19 +109,19 @@ Some of these files are pretty irrelevant today, such as mtools.conf, which is u
   Contains or points to configuration scripts for starting, stopping, and controlling system services when using systemd.
 + **/etc/init.d**
   Contains startup and shutdown scripts for when using System V initialization.
-**** lib Directory
+*** lib Directory
 These directories should contain only those libraries needed to execute the binaries in =/bin= and =/sbin=. These libraries are particularly important for booting the system and executing commands within the root filesystem.
 Kernel modules (often device or filesystem drivers) are located under =/lib/modules/<kernel-version-number>=.
 
 PAM (Pluggable Authentication Modules) files are stored in distribution-dependent locations such as =/lib64/security= or =/lib/x86_64-linux-gnu/security=.
 Systems which support both 32-bit and 64-bit binaries need to keep both kinds of libraries on the system. On some distributions, there are separate directories for 32-bit libraries (=/lib=) and 64-bit libraries (=/lib64=).
-**** media Directory
+*** media Directory
 This directory was typically used to mount filesystems on removable media. These include CDs, DVDs, and USB drives, and even floppy disks.
 Linux systems mount such media dynamically upon insertion, and udev creates directories and then mounts the removable filesystems there, with names that are set with udev rules specified in configuration files. Upon unmounting and removal, the directories used as mount points disappear.
 If the media has more than one partition and filesystem, more than one entry will appear.
 
 Current distros mount removable media at =/run/media= instead of =/media=
-**** mnt Directory
+*** mnt Directory
 This directory is provided so that the system administrator can temporarily mount a filesystem when needed. A common use is for network filesystems, including:
 + NFS
 + Samba
@@ -135,7 +133,7 @@ Command:
 #+begin_src bash
 sudo mount c8:/ISO_IMAGES /mnt
 #+end_src
-**** opt Directory
+*** opt Directory
 This directory is designed for software packages that wish to keep all or most of their files in one isolated place, rather than scatter them all over the system in directories shared by other software. For example, if ~dolphy_app~ were the name of a package which resided under =/opt=, then all of its files should reside in directories under =/opt/dolphy_app=, including =/opt/dolphy_app/bin= for binaries and =/opt/dolphy_app/man= for any man pages.
 This can make both installing and uninstalling software relatively easy, as everything is in one convenient isolated location in a predictable and structured manner. It also makes it easier for system administrators to determine the nature of each file within a package.
 
@@ -145,7 +143,7 @@ In Linux, the =/opt= directory is often used by application providers with eithe
 For example, on one system the packages are in =/opt/brother=, =/opt/zoom= and =/opt/google= and the latter has subdirectories for chrome and earth.
 
 The directories =/opt/bin=, =/opt/doc=, =/opt/include=, =/opt/info=, =/opt/lib=, and =/opt/man= are reserved for local system administrator use. Packages may provide files which are linked or copied to these reserved directories, but the packages must also be able to function without the programs being in these special directories. Most systems do not populate these directories.
-**** proc Directory
+*** proc Directory
 This directory is the mount point for a pseudo-filesystem, where all information resides only in memory, not on disk. Like =/dev=, the =/proc= directory is empty on a non-running system.
 
 The kernel exposes some important data structures through =/proc= entries. Additionally, each active process on the system has its own subdirectory that gives detailed information about the state of the process, the resources it is using, and its history.
@@ -155,29 +153,29 @@ In addition, most of the time and date settings on virtual files reflect the cur
 Important pseudo-files, including =/proc/interrupts=, =/proc/meminfo=, =/proc/mounts=, and =/proc/partitions=, provide an up-to-the-moment glimpse of the system's hardware.
 Others, like =/proc/filesystems= and the =/proc/sys/= directory, provide system configuration information and interfaces.
 For organizational purposes, files containing information on a similar topic are grouped into virtual directories and sub-directories. For instance, =/proc/scsi/= contains information for all physical SCSI devices. Likewise, the process directories contain information about each running process on the system.
-**** sys Directory
+*** sys Directory
 This directory is the mount point for the ~sysfs~ pseudo-filesystem where all information resides only in memory, not on disk. Like =/dev= and =/proc=, the =/sys= directory is empty on a non-running system. It contains information about devices and drivers, kernel modules, system configuration structures, etc.
 
 ~sysfs~ is used both to gather information about the system, and modify its behavior while running. In that sense, it resembles =/proc=, but it is younger than and has adhered to strict standards about what kind of entries it can contain.
 For example, almost all pseudo-files in =/sys= contain only one line, or value; there are none of the long entries you can find in =/proc=.
-**** root Directory
+*** root Directory
 This directory (pronounced "slash-root") is the home directory for the root user.
 The root account that owns this directory should only be used for actions which require superuser privilege. For those actions which can be done as a non-privileged user, use another account.
-**** sbin Directory
+*** sbin Directory
 This directory contains binaries essential for booting, restoring, recovering, and/or repairing in addition to those binaries in the =/bin= directory. They also must be able to mount other filesystems on =/usr=, =/home= and other locations if needed, once the root filesystem is known to be in good health during boot.
 
 The following programs should be included in this directory (if their subsystems are installed):
 fdisk, fsck, getty, halt, ifconfig, init, mkfs, mkswap, reboot, route, swapon, swapoff, update.
 
 Recent distribution versions of RHEL, CentOS, Fedora, and Ubuntu have symbolically linked /sbin and /usr/sbin so they are actually the same.
-**** srv Directory
+*** srv Directory
 =/srv= contains site-specific data which is served by this system.
 This main purpose of specifying this is so that users may find the location of the data files for particular service, and so that services which require a single tree for readonly data, writable data and scripts (such as cgi scripts) can be reasonably placed.
 The methodology used to name subdirectories of =/srv= is unspecified as there is currently no consensus on how this should be done. One method for structuring data under =/srv= is by protocol, e.g. ~ftp, rsync, www, and cvs.~
 
 Some system administrators (and distributions) swear by the use of the =/srv= directory; others ignore it. There is often confusion about what is best to go in =/var=, as opposed to =/srv=.
 On Linux distributions such as Ubuntu and Red Hat-based ones, =/srv= is empty by default.
-**** tmp Directory
+*** tmp Directory
 This directory is used to store temporary files, and can be accessed by any user or application. However, the files on =/tmp= cannot be depended on to stay around for a long time:
 
 - Some distributions run automated cron jobs, which remove any files older than 10 days typically, unless the purge scripts have been modified to exclude them.
@@ -191,7 +189,7 @@ This policy can be canceled on systems using systemd, such as Fedora, by issuing
  sudo systemctl mask tmp.mount
 #+end_src
 followed by a system reboot.
-**** usr Directory
+*** usr Directory
 The =/usr= directory can be thought of as a secondary hierarchy. It is used for files which are not needed for system booting. Indeed, =/usr= need not reside in the same partition as the root directory, and can be shared among hosts using the same system architecture across a network.
 | Directory    | Purpose                                           |
 | ---------    | -------                                           |
@@ -206,7 +204,7 @@ The =/usr= directory can be thought of as a secondary hierarchy. It is used for 
 | /usr/share   | Read-only architecture-independent files          |
 | /usr/src     | Source code and headers for the Linux kernel      |
 | /usr/tmp     | Secondary temporary directory                     |
-**** var Directory
+*** var Directory
 This directory contains variable (or volatile) data files that change frequently during system operation. These include:
 
 - Log files
@@ -227,16 +225,14 @@ For security reasons, it is often considered a good idea to mount =/var= as a se
 | /var/spool   | Tasks spooled or waiting to be processed, such as print queues                 |
 | /var/tmp     | Temporary files to be preserved across system reboot. Sometimes linked to /tmp |
 | /var/www     | Root for website hierarchies                                                   |
-**** run Directory
+*** run Directory
 The purpose of /run is to store transient files: those that contain runtime information, which may need to be written early in system startup, and which do not need to be preserved when rebooting.
 
 Generally, =/run= is implemented as an empty mount point, with a tmpfs ram disk (like =/dev/shm=) mounted there at runtime. Thus, this is a pseudo filesystem existing only in memory.
 Some existing locations, such as =/var/run= and =/var/lock=, will be now just symbolic links to directories under =/run=. Other locations, depending on distribution taste, may also just point to locations under =/run=.
 
 * User Environment
-** Overview
-** User Environment
-*** Environmment Variables
+** Environmment Variables
 The environment variables can be listed with =env=, =set= or =printenv=, there are more than you think
 Many applications and programming languages use them and expect them, failing if they are not present. Linux uses them for many things, setting them up when the system starts. You can create and manipulate your own for your own purposes.
 You can associate a name with a variable value: ~HOME~, ~HOST~, ~PATH~, etc.
@@ -261,7 +257,7 @@ You can associate a name with a variable value: ~HOME~, ~HOST~, ~PATH~, etc.
   export | head -2
   echo $PATH
   #+END_SRC
-*** Important Environment variables
+** Important Environment variables
 Use ~echo $ENVVAR~ to get outputs
 + HOME
   User's home directory
@@ -275,15 +271,166 @@ Use ~echo $ENVVAR~ to get outputs
   User's default shell (bash, csh, etc.)
 + EDITOR
   User's default editor (emacs, vi, etc)
-***
+** Setting Env Vars
+You can list a specific variable.
+#+begin_src bash
+echo $SHELL
+#+end_src
+You can set a new variable value with:
+#+begin_src bash
+VARIABLE=value
+#+end_src
+You can add a new variable permanently:
++ Edit ~/.bashrc to include VARIABLE=value
++ Start a new shell or logout/login
+** Exporting Env Vars
+By default, variables created within a script are only available to the current shell. Child processes (sub-shells) will not have access to the content of this variable. In order for variables to be visible to child processes, they need to be exported using the export command.
+Exporting a variable can be done in one step:
+#+begin_src bash
+export VAR=value
+#+end_src
+or in two steps:
+#+begin_src bash
+VAR=value ; export VAR
+#+end_src
+Keep in mind that the child process is allowed to modify exported variables, but the change in this case will not propagate back to the parent shell since exported variables are not shared, but only copied.
+** User Env
+The shell stores history in ~/.bash_history:
++ Location of the history file: HISTFILE
++ Maximum number of lines in the history file: HISTFILESIZE
++ Maximum number of lines of history list in the current session: HISTSIZE
+** Recalling, Editing Previous Commands
+With the arrow keys, you are essentially moving up and down your history list - most recently executed command first. ~!!~ (often pronounced as “bang-bang”) executes the previous command.
+~CTRL-R~ is used to search through history
+** Prev Command from history
+All history substitutions start with ~!~.
++ To start a history substitution: ~!~
++ To refer to the last argument in a line: ~!$~
++ To refer to the n-th command line: ~!n~
++ To refer to the most recent command starting with ~!string~
+** Alias
+Aliases permit custom definitions. Typing alias with no arguments gives the list of defined aliases. unalias gets rid of an alias.
+You can create customized commands by creating aliases:
+#+begin_src bash
+alias name=command
+#+end_src
+Note that there are no spaces around the = (equal) sign.
+To make an alias persistent, you should edit =~/.bashrc=.
+You can use the following command to get rid of an alias:
+#+begin_src bash
+unalias name
+#+end_src
+You can list all currently active aliases with this command:
+#+begin_src bash
+alias
+#+end_src
 * User Account Management
-** Overview
-** User Account Management
+** Attributes of a User Account
+Each user on the system has a corresponding line in the /etc/passwd file that describes their basic account attributes
+The attributes of a user account are:
++ User name
+  This is the unique name assigned to each user.
++ User password
+  This is the password assigned to each user.
++ User identification number (UID)
+  This is a unique number assigned to the user account. The UID is used by the system for a variety of purposes, including a determination of user privileges and activity tracking.
++ Group identification number (GID)
+  This indicates the primary, principal, or default group of the user.
++ Comment or GECOS information
+  A defined method to use the comment field for contact information (full name, email, office, contact number). Do not worry about what GECOS means, it is a very old term.
++ Home directory
+  For most users, this is a unique directory that offers a working area for the user. Normally, this directory is owned by the user, and except for root, will be found on the system somewhere under =/home=.
++ Login shell
+  Normally, this is a shell program such as ~/bin/bash~ or ~/bin/csh~. Sometimes, however, an alternative program is referenced here for special cases. In general, this field will accept any executable.
+** Startup Files
+Every time a new shell (either a command window or a script that is run) begins executing, there are files included that contain elements employed to ensure proper functioning.
+This may include:
++ Defining relevant environment variables that are used by many programs and scripts (including $PATH)
++ Defining aliases that are used as shorthand to specify commands and options
++ Defining functions that can be used in subsequent scripts
+There are usually system-wide global initializing files found in =/etc= that are used by all users before individualized files are used.
+The files in the user home directory override global settings.
+** Advantages of Startup Files
+Without the startup (initialization) file processing, each time a command or program is run there may be a lot of setup work to ensure proper functioning.
+Many programs evaluate certain environment variables are set when they begin to execute, and then make use of them to control functioning.
 
+For example, any program which needs to modify text files interactively will see how EDITOR is set, perhaps to vim, emacs, or nano (whichever editor the user prefers to use).
+To summarize, some of the advantages of using startup files are:
++ Customizing the user's prompt
++ Setting the user's terminal type
++ Setting command line shortcuts and aliases
++ Setting the default text editor
++ Etc.
+** Startup Files Order
+When you login to Linux, =/etc/profile= is always read and evaluated. Next, the following files are searched for in this order:
++ =~/.bash_profile= - login shells configuration
++ =~/.bash_login= - login initialization
+= =~/.profile= - overrides /etc/profile
+
+After finding the first file it comes to, the Linux login shell will evaluate that one startup file and ignore all the rest.
+While this may sound redundant, various Linux distributions tend to use different startup files.
+
+Every time you create a sub-shell, but aren’t logging in, only =~/.bashrc= is read and evaluated. While it is not read and evaluated with a login shell, most distributions and users will call =~/.bashrc= from within one of the three user-owned startup files; so, in reality, =~/.bashrc= is used for login shells.
+
+Thus the vast majority of your customizations should go into =~/.bashrc=.
+** Creating User Accounts with useradd
+useradd allows for default operation with the following command:
+#+begin_src bash
+sudo useradd bjmoose
+#+end_src
+And causes the following steps to execute:
++ The next available UID greater than ~UID_MIN~ (specified in =/etc/login.defs=) by default is assigned as bjmoose’s UID
++ A group called bjmoose with a ~GID=UID~ is also created and assigned as bjmoose’s primary group
++ A home directory =/home/bjmoose= is created and owned by bjmoose
++ bjmoose’s login shell will be =/bin/bash=
++ The contents of =/etc/skel= is copied to =/home/bjmoose=. By default, =/etc/skel= includes startup files for bash and for the X Window system
++ An entry of ~!!~ is placed in the password field of the =/etc/shadow= file for bjmoose’s entry, thus requiring the administrator to assign a password for the account to be usable.
+
+The defaults can easily be overruled by using options to useradd as in:
+#+begin_src bash
+sudo useradd -s /bin/csh -m -k /etc/skel -c "Bullwinkle J Moose" bjmoose
+#+end_src
+Where explicit non-default values have been given for some of the user attributes.
+** Modifying and Deleting User Accounts
+The root user can delete user accounts with ~userdel~:
+#+begin_src bash
+sudo userdel rjsquirrel
+#+end_src
+All references to the user *rjsquirrel* will be erased from =/etc/passwd=, =/etc/shadow=, and =/etc/group=.
+While this removes the account, it does not delete the home directory (usually =/home/rjsquirrel=) in case the account may be re-established later. If the ~-r~ option is given to ~userdel~, the home directory will also be obliterated.
+However, all other files on the system owned by the removed user will remain.
+
+~usermod~ can be used to change characteristics of a user account such as group memberships, home directory, login name, password, default shell, user id, etc. Usage is pretty straightforward.
+Note that ~usermod~ will take care of any modifications to files in the =/etc= directory as necessary.
+The command:
+#+begin_src bash
+sudo usermod -L bjmoose
+#+end_src
+will lock the user so they cannot login. More commands can be looked at using ~sudo usermod --help~
+** Locked Accounts
+Linux ships with some locked accounts which means they can run programs, but can never login to the system and have no valid password associated with them.
+For example =/etc/passwd= has entries like:
+#+begin_src bash
+bin:x:1:1:bin:/bin:/sbin/nologin
+daemon:x:2:2:daemon:/sbin:/sbin/nologin
+#+end_src
+The nologin shell returns the following if a locked user tries to login to the system: *This account is currently not available*
+Or whatever message may be stored in =/etc/nologin.txt=.
+Such locked accounts are created for special purposes, either by system services or applications; if you scan =/etc/passwd= for users with the nologin shell you can see who they are on your system.
+It is also possible to lock the account of a particular user as in the following command:
+#+begin_src bash
+sudo usermod -L bjmoose
+#+end_src
+Which means the account stays on the system but logging in is impossible. Unlocking can be done with the ~-U~ option.
+A customary practice is to lock a user’s account whenever they leave the organization or is on an extended leave of absence.
+Another way to lock an account is to use chage to change the expiration date of an account, as in the following command:
+#+begin_src bash
+sudo chage -E 2001-09-11 rjsquirrel
+#+end_src
+The actual date is irrelevant as long as it is in the past.
+Locked accounts have no valid password, and are usually represented by "!!" in =/etc/shadow=
+**
 * Group Management
-** Overview
-** Group Management
-
 * File Permissions and Ownership
 ** Overview
 ** File Permissions and Ownership
@@ -332,11 +479,9 @@ Use ~echo $ENVVAR~ to get outputs
 ** Overview
 ** I/O Monitoring and Tuning
 
-* ontainers ** Overview
+* Containers
 ** Overvie
-** Container ** Overview
-
-
+** Container
 * Linux Filesystems and the VFS
 ** Overview
 ** Linux Filesystems and the VFS
