@@ -429,7 +429,212 @@ sudo chage -E 2001-09-11 rjsquirrel
 #+end_src
 The actual date is irrelevant as long as it is in the past.
 Locked accounts have no valid password, and are usually represented by "!!" in =/etc/shadow=
-**
+** User IDs and /etc/passwd
+The convention most Linux distributions have used is that any account with a UID less than 1000 is considered special and belongs to the system; normal user accounts start at 1000.
+The actual value is defined as UID_MIN and is defined in =/etc/login.defs=.
+Historically, Red Hat-derived distributions used ~UID_MIN=500~, not 1000, but beginning with ~RHEL 7~, the more common value of ~1000~ was adopted.
+
+If a UID is not specified when using useradd, the system will incrementally assign use IDs starting at ~UID_MIN~.
+
+Additionally, each user gets a Primary Group ID which by default is the same number as the UID. These are sometimes called User Private Groups (UPG).
+=/etc/passwd= file contains one record (one line) for each user, each of which is a colon ( : ) separated list of fields:
+
++ username: user’s unique name
++ password: either the hashed password (if =/etc/shadow= is not used) or a place holder (”x” when =/etc/shadow= is used)
++ UID: user identification number
++ GID: primary group identification number for the user
++ comment: comment area, usually the user’s real name
++ home: directory pathname for the user’s home directory
++ shell: absolutely qualified name of the shell to invoke at login
+
+It is bad practice to edit =/etc/passwd=, =/etc/group= or =/etc/shadow= directly; use appropriate utilities such as ~usermod~, or for advanced users - the slightly safer tools ~vipw/vigr~.
+** Why Use /etc/shadow?
+The default permissions of =/etc/passwd= are ~644 (-rw-r--r--)~; anyone can read the file. This is unfortunately necessary because system programs and user applications need to read the information contained in the file. These system programs do not run as the user root and, in any event, only root may change the file.
+
+Of particular concern are the hashed passwords themselves. If they appear in =/etc/passwd=, anyone may make a copy of the hashed passwords and then make use of utilities such as Crack and John the Ripper to guess the original cleartext passwords given the hashed password. This is a security risk!
+=/etc/shadow= has permission settings of ~400 (-r--------)~, which means that only root can access this file. This makes it more difficult for someone to collect the hashed passwords.
+
+Unless there is a compelling good reason not to, you should use the =/etc/shadow= file.
+** /etc/shadow Format
+=/etc/shadow= contains one record (one line) for each user, as in:
+#+begin_src bash
+daemon:*:16141:0:99999:7:::
+.....
+beav:$6$iCZyCnBJH9rmq7P.$RYNm10Jg3wrhAtUnahBZ/mTMg.RzQE6iBXyqaXHvxxbK\
+   TYqj.d9wpoQFuRp7fPEE3hMK3W2gcIYhiXa9MIA9w1:16316:0:99999:7:::
+#+end_src
+
+Each record contains fields separated by colons ( : ):
++ username: unique user name
++ password: the hashed (sha512) value of the password
++ lastchange: days since Jan 1, 1970 that password was last changed
++ mindays: minimum days before password can be changed
++ maxdays: maximum days after which password must be changed
++ warn: days before password expires that the user is warned
++ grace: days after password expires that account is disabled
++ expire: date that account is/will be disabled
++ reserved: reserved field
+
+The username in each record must match exactly that found in =/etc/passwd=, and also must appear in the identical order. All dates are stored as the number of days since Jan. 1, 1970 (_the epoch date_).
+
+The password hash is the string ~$6$~ followed by an eight character salt value, which is then followed by a $ and an 88 character (~sha512~) password hash.
+** Password Management
+
+Passwords can be changed with passwd.
+
+Users can change their own password. Root can change any user password.
+
+By default, the password choice is examined by ~pam_cracklib.so~, which furthers making good password choices.
+A normal user changing their password would type the following command:
+#+begin_src bash
+passwd
+#+end_src
+Note that when root changes a user’s password, root is not prompted for the current password.
+Command:
+#+begin_src bash
+sudo passwd rjsquirrel
+#+end_src
+Note that normal users will not be allowed to set bad passwords, such as ones that are too short, or based on dictionary words. However, root is allowed to do so.
+** Password Aging (chage)
+It is generally considered important to change passwords periodically. This limits the amount of time a cracked password can be useful to an intruder and also can be used to lock unused accounts.
+The downside is users can find this policy annoying and wind up writing down their ever-changing passwords and thus making them easier to steal.
+The utility that manages this is chage:
+#+begin_src bash
+chage [-m mindays] [-M maxdays] [-d lastday] [-I inactive] [-E expiredate] [-W warndays] user
+#+end_src
+Only the root user can use chage. The one exception to this is that any user can run with the -l option to determine when their password or account is due to expire.
+To force a user to change their password at their next login, you can run the following command:
+#+begin_src bash
+sudo chage -d 0 USERNAME
+#+end_src
+Examples of chage:
+#+begin_src bash
+sudo chage -l beaver
+sudo chage -m 14 -M 30 wally
+sudo chage -E 2012-4-1 eddie
+sudo chage -d 0 june
+#+end_src
+** The root Account
+root has access to everything and can do everything; this is a very powerful account.
+
+~sudo~ allows regular user accounts to have root privileges on a temporary basis. ~sudo~ can be configured to allow only certain accounts to have this ability and for certain accounts to only have elevated privileges for certain commands. ~sudo~ configuration is done in =/etc/sudoers= and =/etc/sudoers.d=. See ~man sudo~ for more details.
+~su~ (pronounced ess-you and means switch or substitute user) creates a sub-shell environment that allows the user elevated privileges until they exit that shell.
+All commands executed in that sub-shell are executed with the elevated privileges of the root user.
+
+The root account should only be used for administrative purposes when absolutely necessary and never used as a regular account. Mistakes can be very costly, both for integrity and stability, and system security.
+
+By default, root logins through the network are generally prohibited for security reasons.
+One can permit Secure Shell logins using ~ssh~, which is configured with =/etc/ssh/sshd_config=, and ~PAM~ (Pluggable Authentication Modules), through the =pam_securetty.so= module and the associated =/etc/securetty= file. Root login is permitted only from the devices listed in =/etc/securetty=.
+
+It is generally recommended that all root access be through ~su~ or ~sudo~ (causing an audit trail of all root access through sudo).
+Note some distributions (such as Ubuntu), by default actually prohibit logging in directly to the root account.
+~PAM~ can also be used to restrict which users are allowed to ~su~ into root. It might also be worth it to configure ~auditd~ to log all commands executed as root.
+** SSH
+One often needs to login through the network into a remote system, or carry out commands on a remote system, either with the same username or another.
+Or one needs to transfer files to and from a remote machine (/using scp/). In either case, one wants to do this securely, free from interception.
+
+SSH (Secure SHell) exists for this purpose. It uses encryption based on strong algorithms.
+Assuming the proper ssh packages are installed on a system, one needs no further setup to begin using ssh. To sign onto a remote system, you can use the following command:
+#+begin_src bash
+ssh root@farflung.com
+ssh -l root farflung.com
+#+end_src
+
+To copy files from one system to another, you can do the following:
+#+begin_src bash
+scp file.txt farflung.com:/tmp
+scp file.tex student@farflung.com/home/student
+scp -r some_dir farflung.com:/tmp/some_dir
+#+end_src
+To run a command on multiple systems simultaneously, you can use the following command:
+#+begin_src bash
+for machines in node1 node2 node3
+  do
+      (ssh $machines some_command &)
+done
+#+end_src
+You can use the ~pssh~ (Parallel SSH) utility to execute a command on multiple systems in one fell stroke as in:
+#+begin_src bash
+pssh -viH machine1 machine2 machine3 do_something
+#+end_src
+You may need to read the ~man~ page for ~pssh~ to figure out all its options and how to deal with passwords.
+** ssh Configuration Files
+One can configure SSH further to expedite its use, in particular to permit logging in without a password. User-specific configuration files are created under every user’s home directory in the hidden .ssh directory:
+
++ id_rsa: the user's private key
++ id_rsa.pub: the user's public key
++ authorized_keys: public keys that are permitted to log in
++ known_hosts: hosts from which logins have been allowed in the past
++ config: file for specifying various options
+First a user has to generate their private and public encryption keys with ~ssh-keygen~
+
+The private key must never ever be shared with anyone. The public key, however, should be given to any machine with which you want to permit password-less access.
+
+Note that ~authorized_keys~ contains public keys that are allowed to login as you on this machine.
+~known_hosts~ is gradually built up as ssh accesses occur. If the system detects changes in the users who are trying to log in through ssh, it will warn you of them and afford the opportunity to deny access.
+
+Check out these [[https://infosec.mozilla.org/guidelines/openssh][online OpenSSH]] guidelines for a list of updated best practices on ssh configuration parameters.
+** SSH Configuration File Precedence
+
+The order the configuration files are processed is as follows:
+1. ~/.ssh/config
+2. /etc/ssh/ssh_config
+
+The precedence of the files and the contents is first match used.
+#+begin_src bash
+/home/student/.ssh/config
+
+Host apple
+         HostName 192.168.0.196
+         User student
+         Port 4242
+         IdentityFile /home/student/.ssh/custom
+
+Host aws
+         Hostname ec2-34-238-135-25.compute-1.amazonaws.com
+         User ubuntu
+         IdentityFile /home/student/.ssh/cloud1.pem
+         ForwardX11 no
+         PasswordAuthentication no Host *
+#+end_src
+
+In the above =~/.ssh/config= specific configuration information is listed for the hosts ~apple~ and ~aws~.
+If neither of these match, then the generic parameters would apply. This configuration has no generic parameters. The command usage would be:
+#+begin_src bash
+ssh apple
+echo "or"
+ssh aws
+#+end_src
+** SSH on a Cloud System
+SSH on a cloud system works the same, with some automation applied.
++ The ssh keys are generated for the default user during cloud system creation
++ The public key is copied into the default user’s authorized_keys file
++ An option to copy the public and private to your local system is presented
++ Password-based authentication is generally not supported for users on cloud systems
+It is not uncommon to misplace public keys on remote systems. Recreating a public can be done with ~ssh-keygen~.
+#+begin_src bash
+ssh-keygen -y -f ̃/.ssh/id_ed25519 > ̃/.ssh/id_ed25519.pub
+#+end_src
+Can be used to generate a new public key using the private one
+** Remote Graphical Login
+You can login into remote machine with full graphical desktop.
++ Often use VNC (Virtual Network Computing)
++ Common implementation is tigervnc
+
+This can be as simple as running the following command on a local machine:
+#+begin_src bash
+vncviewer -via server student@some_machine localhost:2
+#+end_src
+You may have to play with numbers other than 2 (1, 3, 4, ...) depending on what you are running at the moment and how your machine is configured.
+To view from a remote machine it is just slightly different. You can do:
+#+begin_src bash
+vncviewer -via student@some_machine localhost:2
+#+end_src
+If you get a rather strange message about having to authenticate because of "color profile" and no passwords work, you have to kill the colord daemon on the server machine, as in:
+#+begin_src bash
+sudo systemctl stop colord
+#+end_src
+This is a bug (not a feature) and will only appear in some distributions and some systems for unclear reasons.
 * Group Management
 * File Permissions and Ownership
 ** Overview
