@@ -636,10 +636,193 @@ sudo systemctl stop colord
 #+end_src
 This is a bug (not a feature) and will only appear in some distributions and some systems for unclear reasons.
 * Group Management
-* File Permissions and Ownership
-** Overview
-** File Permissions and Ownership
+** Groups
+Linux systems form collections of users called groups, whose members share some common purpose. To further that end, they share certain files and directories, and maintain some common privileges; this separates them from others on the system, sometimes collectively called the world. Using groups aids collaborative projects enormously. Users belong to one or more groups.
 
+Groups are defined in the =/etc/group= file, which has the same role for groups as the =/etc/passwd= file has for users. Each line of the file looks like:
+~groupname:password:GID:user1,user2,...~
+
+where:
++ ~groupname~ is the name of the group.
++ ~password~ is the password placeholder. Group passwords may be set, but only if =/etc/gshadow= exists.
++ ~GID~ is the group identifier. Values between 0 and 99 are for system groups. Values between 100 and ~GID_MIN~ (as defined in =/etc/login.defs= and usually the same as ~UID_MIN~) are considered special.
+  Values over GID_MIN are for ~UPG~ (User Private Groups).
++ ~user1,user2,...~ is a comma-separated list of users who are members of the group. The user need not be listed here if this group is the user's principal group.
+** Group Membership
+A Linux user has one primary group; this is listed in =/etc/passwd= and will also be listed in =/etc/group=. A user may belong to between 0 and 15 secondary groups.
+The primary group is the ~GID~ that is used whenever the user creates files or directories. Membership in other, secondary, groups grants the user additional permissions.
+
+Group membership can be identified by running either of the following commands:
+#+begin_src bash
+groups [user1 user2 ...]
+id -Gn [user1 user2 ...]
+#+end_src
+With no arguments, either command reports on the current user.
+*Note that the default groups can differ by distribution and installation specifics*:
++ On CentOs:
+  #+begin_src bash
+  [student@CentOS ~]$ groups
+  student
+  #+end_src
++ On Ubuntu:
+  #+begin_src bash
+  student@ubuntu:~$ groups
+  student adm cdrom sudo dip plugdev lpadmin sambashare libvirt
+  #+end_src
+** Group Management
+Group accounts may be managed and maintained with:
++ ~groupadd~: Add a new group
++ ~groupmod~: Modify a group's attributes
++ ~groupdel~: Remove a group
++ ~usermod~: Manage a user's group memberships
+
+These group manipulation utilities modify the =/etc/group= file and, if it exists, the =/etc/gshadow= file, and may only be executed by root. Example commands:
+#+begin_src bash
+sudo groupadd -r -g 215 staff
+sudo groupmod -g 101 blah
+sudo groupdel newgroup
+sudo usermod -G student,group1,group2 student
+#+end_src
+#+begin_quote
+Important Note:
+The usermod -G command is the total use list of groups, so it will delete and add groups all on one command line. Non-destructive use should utilize the -a option, which will preserve pre-existing group memberships when adding new ones.
+#+end_quote
+** User Private Groups
+Linux uses User Private Groups (UPG).
+The idea behind UPGs is that each user will have his or her own group. However, UPGs are not guaranteed to be private; additional members may be added to someone's private group in =/etc/group=.
+
+By default, users whose accounts are created with ~useradd~ have the primary group id equal to their user id /GID = UID/ and their group name is also identical to the username.
+As specified in =/etc/profile=, the umask is set to /002/ for all users created with ~UPG~. Under this scheme, user files are thus created with permissions ~664 (rw-rw-r--)~ and directories with ~775 (rwxrwxr-x)~.
+* File Permissions and Ownership
+** Owner, Group and World
+When you run the ~ls -l~ command, as in:
+#+begin_src bash
+$> ls -l a_file
+-rw-rw-r-- 1 coop aproject 1601 Mar 9 15:04 a_file
+#+end_src
+
+After the first character (which indicates the type of the file object), there are nine more which indicate the access rights granted to potential file users.
+These are arranged in three groups of three, corresponding to:
++ owner: the user who owns the file (also called user)
++ group: the group of users who have access
++ other: the rest of the world (also called world)
+
+In the above listing, the user is ~coop~ and the group is ~aproject~.
+** File Access Rights
+
+If you do a long listing of a file, as in the following command:
+#+begin_src bash
+$> ls -l /usr/bin/vi
+-rwxr-xr-x 1 root root 910200 Jan 30 2014 /usr/bin/vi
+#+end_src
+Each of the triplets (in characters 2-10) can have each of the following sets:
++ /r/: read access is allowed
++ /w/: write access is allowed
++ /x/: execute access is allowed
+
+If the permission is not allowed, a /-/ (dash) appears instead of one of these characters.
+
+In addition, other specialized permissions exist for each category, such as the ~setuid/setgid~ permissions.
+
+These file access permissions are a critical part of the Linux security system. Any request to access a file requires comparison of the credentials and identity of the requesting user to those of the owner of the file.
+
+This authentication is granted depending on one of these three sets of permissions, in the following order:
+- If the requester is the file owner, the file owner permissions are used.
+- Else, if the requester is in the group that owns the files, the group permissions are examined.
+- If that doesn't succeed, the world permissions are examined.
+** chmod
+Changing file permissions is done with chmod. You can only change permissions on files you own, unless you are the superuser.
+
+There are a number of different ways to use chmod.
+To give the owner and world execute permission, and remove the group write permission, use this command:
+#+begin_src bash
+$> ls -l a_file
+-rw-rw-r-- 1 coop coop 1601 Mar 9 15:04 a_file
+
+$> chmod uo+x,g-w a_file
+$> ls -l a_file
+-rwxr--r-x 1 coop coop 1601 Mar 9 15:04 a_file
+#+end_src
+where /u/ stands for user (owner), /o/ stands for other (world), and /g/ stands for group.
+
+Permissions can be represented either as a bitmap, usually written in octal, or in a symbolic form. Octal bitmaps usually look like 0755, while symbolic representations look like ~u+rwx~, ~g+rwx~, ~o+rx~.
+** Octal Digits
+The symbolic syntax can be difficult to type and remember, so one often uses the octal shorthand, which lets you set all the permissions in one step.
+This is done with a simple algorithm, and a single digit suffices to specify all three permission bits for each entity. The octal number representation is the sum for each digit of:
+
++ /4/ if the read permission is desired
++ /2/ if the write permission is desired
++ /1/ if execute permission is desired
+Thus, /7/ means *rwx*, /6/ means *rw*, and /5/ means *rx*.
+** chown and chgrp
+Changing file ownership is done with chown and changing the group ownership is done with ~chgrp~.
+Only the superuser can change ownership on files.
+Likewise, you can only change group ownership to groups that you are a member of.
+
+Change file ownership with chown by running this command (/superuser only/):
+#+begin_src bash
+sudo chown wally somefile
+#+end_src
+Change group ownership with the chgrp command (/only your groups/):
+#+begin_src bash
+sudo chgrp cleavers somefile
+#+end_src
+Change both at the same time with this command:
+#+begin_src bash
+sudo chown wally:cleavers somefile
+#+end_src
+where you separate the owner and the group with a colon (or period).
+
+Use the -R option for recursive as presented in the following commands:
+#+begin_src bash
+sudo chown -R wally:cleavers ./
+sudo chown -R wally:wally <subdir>
+#+end_src
+The ~-R~ option ensures all files and directories underneath the given path have their ownership changed.
+** umask
+The default permissions given when creating a file are *rw* for owner, group and world (/0666/), and for a directory it is *rwx* for everyone (/0777/).
+However, if you run the following commands:
+#+begin_src bash
+$> touch afile
+$> mkdir adir
+$> ls -l | grep -e afile -e adir
+drwxrwxr-x 2 coop coop 4096 Sep 16 11:18 adir
+-rw-rw-r-- 1 coop coop    0 Sep 16 11:17 afile
+#+end_src
+you  notice the actual permissions have changed to 664 for the file and 775 for the directory. They have been modified by the current umask whose purpose is to show which permissions should be denied. The current value can be shown by (command and output below):
+#+begin_src bash
+umask
+0002
+#+end_src
+Which is the most conventional value set by system administrators for users.
+This value is combined with the file creation permissions to get the actual result; i.e., *0666 & ~002 = 0664; i.e., rw-rw-r--*
+
+You can change the umask at any time with the umask command, as in:
+#+begin_src bash
+umask 0022
+#+end_src
+The default umask is set in =/etc/profile=. The root's umask is ~022~.
+** Filesystem ACLs
+POSIX ACLs (Access Control Lists) extend the simpler user, group, and world system.
+
+Particular privileges can be granted to specific users or groups of users when accessing certain objects or classes of objects. Files and directories can be shared without using /777/ permissions.
+
+While the Linux kernel enables the use of ACLs, it still must be implemented as well in the particular filesystem.
+All major filesystems used in modern Linux distributions incorporate the ACL extensions, and one can use the option ~-acl~ when mounting.
+A default set of ACLs is created at system install.
+
+Use ~getfacl/setfacl~ to ~get/set~ ACLs. For example:
+#+begin_src bash
+getfacl /home/stephane/file1 # to check
+setfacl -m u:isabelle:rx /home/stephane/file1 # to add permission
+setfacl -x u:isabelle    /home/stephane/file # to remove permission
+#+end_src
+Note that new files inherit the default ACL (if set) from the directory they reside in. Also note that ~mv~ and ~cp -p~ preserve ACLs.
+
+To set the default on a directory, type:
+#+begin_src bash
+$ setfacl -m d:u:isabelle:rx somedir
+#+end_src
 * Package Management Systems
 ** Overview
 ** Package Management Systems
