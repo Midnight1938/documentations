@@ -1,7 +1,7 @@
 #+title: Lfs 207 Course
 #+date: <2024-12-17 Tue>
 #+duedate: <2024-06-30 Sun>
-#+STARTUP: inlineimages visual-line-mode
+#+STARTUP: inlineimages visual-line-mode org-superstar-mode
 
 * Table Of Contents :toc_1:
 - [[#course-introduction][Course Introduction]]
@@ -943,17 +943,312 @@ By liberating the controls system from a file-by-file-based system, one is bette
 ~git~ is always under rapid development and graphical interfaces to it are also under speedy construction.
 For example, see [[https:git.kernel.org/][git repositories]] web page. You can easily browse particular changes, as well as source trees. Sites like [[https:github.com/][GitHub]] now host literally millions of git repositories, both public and private. There are a host of easy-to-find articles, books, online tutorials, etc., on how to profitably use git.
 * dpkg
-** Overview
-** dpkg
+** DPKG Essentials
+DPKG (Debian Package) is the packaging system used to install, remove, and manage software packages under Debian Linux and other distributions derived from it. Like RPM, it is not designed to directly retrieve packages in day-to-day use, but to install and remove them locally.
 
+Package files have a ~.deb~ suffix and the DPKG database resides in the =/var/lib/dpkg= directory.
+
+Like ~rpm~, the ~dpkg~ program has only a partial view of the universe: it knows only what is installed on the system, and whatever it is given on the command line, but knows nothing of the other available packages, whether they are in some other directory on the system, or out on the Internet.
+As such, it will also fail if a dependency is not met, or if one tries to remove a package other installed packages need.
+** Package File Names and Source
+Debian package file names are based on fields that represent specific information. The standard naming format for a binary package is:
+~<name>_<version>-<revision_number>_<architecture>.deb~
+as in:
+#+begin_src bash
+logrotate_3.14.0-4_amd64.deb
+logrotate_3.14.0-4ubuntu3_amd64.deb
+#+end_src
+For historical reasons, the 64-bit x86 platform is called amd64 rather than x86_64, and distributors such as Ubuntu (because ofcourse) manage to insert their name in the package name.
+
+A source package consists of at least three files:
+- An upstream tarball, ending with ~.tar.gz~
+- A description file, ending with ~.dsc~
+- A second tarball that contains any patches to the upstream source, and additional files created for the package, and ends with ~.debian.tar.gz~ or ~.diff.gz~, depending on distribution.
+** DPKG Queries
+It is often important to get information about a particular package or to locate any files that have changed after installation.
+For example, to see what version of a particular package is installed, you can run the following command:
+#+begin_src bash
+$> dpkg -s dpkg | grep -i version
+Version: 1.19.7ubuntu3.2
+#+end_src
+
+Without additional arguments, ~dpkg -V~ will verify all packages on the system:
+#+begin_src bash
+$> sudo dpkg -V
+??5?????? c /etc/logrotate.conf
+??5?????? c /etc/logrotate.d/apt
+??5?????? c /etc/logrotate.d/bootlog
+....
+#+end_src
+You can take a look at the man page for more information.
+** Installing/Upgrading/Uninstalling Packages with dpkg
+#+begin_src bash
+$ sudo dpkg -i foobar.deb
+#+end_src
+Can be used to either install or upgrade the foobar package.
+
+When using the ~-i~ option for install:
+- If the package is not currently installed, then it will be installed.
+- If the package is newer than the one currently installed, then it will be upgraded.
+
+#+begin_src bash
+$ sudo dpkg -r package
+#+end_src
+Removes all of an installed package except for its configuration files.
+
+#+begin_src bash
+$ sudo dpkg -P package
+#+end_src
+Removes all of an installed package, including its configuration files.
+Note that ~-P~ stands for purge.
 * APT
-** Overview
-** APT
+** What Is APT?
+For use on Debian-based systems, the APT (Advanced Packaging Tool) set of programs provides a higher level of intelligent services for using the underlying dpkg program, and plays the same role as dnf on Red Hat-based systems.
+The main utilities are apt and apt-cache. It can automatically resolve dependencies when installing, updating and removing packages.
+It accesses external software repositories, synchronizing with them and retrieving and installing software as needed.
 
+The APT system works with Debian packages whose files have a .deb extension.
+
+Once again, we are going to ignore GUI (on your computer), such as Synaptic or the Ubuntu Software Center, or other older front ends to APT, such as aptitude.
+
+apt vs. apt-get
++ For almost all interactive purposes, it is /no longer necessary to use apt-get/; one can just use the shorter name apt.
+  However, you will see apt-get used all the time out of habit, and it works better in scripts. In this course, we sometimes use apt-get because the commands we reference can be used either at the command line or in scripts.
+** apt, apt-get, apt-cache, etc.
+~apt~, ~apt-get~, ~apt-cache~ utilities are the APT command line tools for package management.
+They can be used to install, manage and upgrade individual packages or the entire system, and can even upgrade the distribution to a completely new release, which can be a difficult task.
+They can also retrieve packages from repositories.
+
+There are even (imperfect) extensions that let ~apt~ work with ~rpm~ files.
+
+Like dnf and zypper, APT works with multiple remote repositories.
+Excellent Internet-based resources can be found on the Debian packages webpage and the Ubuntu packages webpage. They let you search for packages, examine their contents, and download them to your system.
+** What is the difference
++ apt
+  - Introduced as a more user-friendly, high-level command-line interface.
+  - Combines the most commonly used features of both apt-get and apt-cache into a single command set.
++ apt-get
+  - Older, lower-level command-line tool for interacting with the APT package management system.
+  - Provides more granular control and additional options, useful for scripting and automation.
++ apt-cache
+  - Used specifically for querying the package database (searching, showing package details, etc.).
+  -  Most of its common features have been integrated into apt
 * RPM
-** Overview
-** RPM
+** Advantages of Using RPM
+RPM is a package management utility developed by Red Hat. The name originally stood for Redhat Package Manager.
+All files related to a specific task or subsystem are packaged into a single file, which also contains information about how and where to install and uninstall the files.
+When developers create a new version of a program, they usually release a new RPM package. Be aware that these files may not be usable for other Linux distributions.
 
+For system administrators, RPM makes software packages easy to manage.
+It is easy to determine which package a particular file comes from, which version of the package is installed, and whether it was installed correctly.
+It is also easy to remove complete packages to free up disk space.
+RPM also distinguishes documentation files from the rest of a package, allowing you to choose whether to install documentation on a system.
+** Package File Names
+RPM package file names are based on fields that represent specific information, as documented in the RPM standard.
++ The standard naming format for a binary RPM package is:
+  #+begin_src bash
+  <name>-<version>-<release>.<distro>.<architecture>.rpm
+  sed-4.5-2.e18.x86_64.rpm
+  #+end_src
++ The standard naming format for a source RPM package is:
+  #+begin_src bash
+  <name>-<version>-<release>.<distro>.src.rpm
+  sed-4.5-2.e18.src.rpm
+  #+end_src
+Note that the distro field often actually specifies the repository that the package came from.
+As a given installation may use a number of different package repositories, as we shall see when we discuss dnf, yum and zypper which work at a level above RPM.
+** RPM Database and Helper Programs
+=/var/lib/rpm= is the default system directory which holds RPM database files in the form of Berkeley DB hash files.
+The database files should not be manually modified; updates should be done only through the use of the rpm program.
+
+An alternative database directory can be specified with the ~--dbpath~ option to the rpm program. One might do this, for example, to examine an RPM database copied from another system.
+
+You can use the ~--rebuilddb~ option to rebuild the database indices from the installed package headers; this is more of a repair, and not a rebuild from scratch.
+#+begin_src bash
+sudo rpm --rebuilddb
+#+end_src
+Helper programs and scripts used by RPM reside in the =/usr/lib/rpm= directory.
+
+You can create an rpmrc file to specify default settings for rpm. By default, rpm looks for:
++ =/usr/lib/rpm/rpmrc=
++ =/etc/rpmrc=
++ =~/.rpmrc=
+in the above order.
+Note all these files are read; ~rpm~ does not stop as soon as it finds that one exists. An alternative ~rpmrc~ file can be specified using the ~--rcfile~ option.
+** Queries
+
+All rpm inquiries include the -q option, which can be combined with numerous other query options:
+
+    -f: allows you to determine which package a file came from
+    -l: lists the contents of a specific package
+    -a: all the packages installed on the system
+    -i: information about the package
+    -p: run the query against a package file instead of the package database
+
+| Task                                                                                 | Command                           |
+| ----                                                                                 | --------                          |
+| Which version of a package is installed?                                             | $ rpm -q bash                     |
+| Which package did this file come from?                                               | $ rpm -qf /bin/bash               |
+| What files were installed by this package?                                           | $ rpm -ql bash                    |
+| Show information about this package.                                                 | $ rpm -qi bash                    |
+| Show information about this package from the package file, not the package database. | $ rpm -qip foo-1.0.0-1.noarch.rpm |
+| List all installed packages on this system.                                          | $ rpm -qa                         |
+
+A couple of other useful parameters are ~--requires~ and ~--whatprovides~. The ~--requires~ option will return a list of prerequisites for a package, while the ~--whatprovides~ option will show what installed package provides a particular requisite package.
+** Verifying Packages
+The ~-V~ option to rpm allows you to verify whether the files from a particular package are consistent with the system’s RPM database.
+Use the ~rpm -Va~ command to verify all packages on the system.
++ S: filesize differs
++ M: mode differs (permissions and file type)
++ 5: MD5 sum differs
++ D: device major/minor number mismatch
++ L: readLink path mismatch
++ U: user ownership differs
++ G: group ownership differs
++ T: mTime differs
+In the output (you only see output if there is a problem) each of the characters denotes the result of a comparison of attribute(s) of the file to the value of those attribute(s) recorded in the database.
+A single "." (period) means the test passed, while a single "?" (question mark) indicates the test could not be performed (e.g. file permissions prevent reading).
+Otherwise, the character denotes the failure of the corresponding ~--verify~ test.
+For Example:
+#+begin_src bash
+$> rpm -V logrotate
+S.5....T. c /etc/logrotate.conf
+#+end_src
+Output indicating that a file is missing.
+** Installing Packages
+RPM performs a number of tasks when installing a package:
++ Dependency checks
++ Conflict checks
++ Commands required before installation
++ Handles configuration files with intelligent care
++ Unpacks files from package and installs them with correct attributes
++ Commands required after installation
++ Updates system RPM database
+
+To install a package, the rpm -i command is used, as in:
+#+begin_src bash
+$ sudo rpm -ivh bash-4.4.19-12.el8_0.x86_64
+#+end_src
+where the ~-i~ is for install, ~-v~ is for verbose, and ~-h~ means print hash marks to show progress.
+
+/Conflicts/ include attempts to install an already-installed package, or to install an older version over a newer version.
+
+When installing a configuration file, if the file exists and has been changed since the previous version of the package was installed, RPM saves the old version with the suffix ~.rpmsave~.
+This allows you to integrate the changes you have made to the old configuration file into the new version of the file. This feature also depends on properly created ~RPM~ packages.
+
+In addition to installing files in the right place, RPM also sets attributes such as permissions, ownership, and modification (build) time.
+Every time RPM installs a package, it updates information in the system database. It uses this information when checking for conflicts.
+** Uninstalling Packages
+The ~-e~ option causes rpm to uninstall (erase) a package.
+Normally, the ~rpm -e~ command fails with an error message if the package you are attempting to uninstall is required by other packages on the system.
+A successful uninstall produces no output.
+#+begin_src bash
+$> sudo rpm -e system-config-lvm
+package system-config-lvm is not installed
+#+end_src
+An example of error due to dependencies can be seen below.
+#+begin_src bash
+$> sudo rpm --test -e xz
+error: Failed dependencies:
+        xz is needed by (installed) pcp-5.1.1-4.el8_3.x86_64
+        xz is needed by (installed) sos-3.9.1-6.el8.noarch
+...
+#+end_src
+You can use the ~--test~ option along with ~-e~ to determine whether the uninstall would succeed or fail, without actually doing the uninstall.
+If the operation would be successful, rpm prints no output. Add the -vv option to get more information.
+
+Remember the package argument for the erase is the package name, not the rpm file name.
+#+begin_quote
+Never uninstall the rpm package itself, the only way to fix that is to reinstall the OS or booting into rescue
+#+end_quote
+** Updating Packages
+Updating replaces the original package (if installed), as in the following command:
+#+begin_src bash
+$> rpm -Uvh bash-4.4.19-12.el8.x86_64.rpm
+#+end_src
+You can give a list of package names, not just one.
+When upgrading, the already installed package is removed after the newer version is installed.
+The one exception is the configuration files from the original installation, which are kept with a ~.rpmsave~ extension.
+
+If you use the ~-U~ option and the package is not already installed, it is simply installed and there is no error.
+The ~-i~ option is not designed for upgrades; attempting to install a new RPM package over an older one fails with error messages, because it tries to overwrite existing system files.
+
+However, different versions of the same package may be installed if each version of the package does not contain the same files: kernel packages and library packages from alternative architectures are typically the only packages that would be commonly installed multiple times.
+
+If you want to downgrade with ~rpm -U~, you must add the ~--oldpackage~ option to the command line.
+** Freshening Packages
+#+begin_src bash
+$ sudo rpm -Fvh *.rpm
+#+end_src
+will attempt to freshen all the packages in the current directory. The way this works is:
+
++ If an older version of a package is installed, it will be upgraded to the newer version in the directory.
++ If the version on the system is the same as the one in the directory, nothing happens.
++ If there is no version of a package installed, the package in the directory is ignored.
+
+Both upgrading and freshening will install a new package if the original package is already loaded.
+The ~-F~ option is useful when you have downloaded several new patches and want to upgrade the packages that are already installed, but not install any new ones.
+
+Freshening can be useful for applying a lot of patches (i.e., upgraded packages) at once.
+** Upgrading the Linux Kernel
+When you install a new kernel on your system, it requires a reboot (one of the few updates that do) to take effect.
+You should not do an upgrade (~-U~) of a kernel: *an upgrade would remove the old currently running kernel.*
+
+This, in and of itself, will not stop the system, but if, after a reboot, you have any problems, you will no longer be able to reboot into the old kernel, since it has been removed from the system. However, if you install (~-i~), both kernels coexist and you can choose to boot into either one; i.e., you can revert back to the old one if need be.
+
+To install a new kernel on a Red Hat-based system, run the following command:
+#+begin_src bash
+$> sudo rpm -ivh kernel-{version}.{arch}.rpm
+#+end_src
+filling in the correct version and architecture names.
+
+When you do this, the /GRUB/ configuration file will automatically be updated to include the new version; it will be the default choice at boot, unless you reconfigure the system to do something else.
+
+Once the new kernel version has been tested, you may remove the old version if you wish, though this is not necessary.
+Unless you are short on space, it is recommended that you keep one or more older kernels available.
+
+If you really want to remove older versions of the kernel and other packages, on Red Hat-based systems you can do:
+#+begin_src bash
+$> sudo dnf remove --oldinstallonly
+#+end_src
+Be careful when using this command!
+** Using rpm2archive and rpm2cpio
+~rpm2archive~ is used to convert RPM package files to tar archives. If /-/ is given as an argument, input and output will be on stdin and stdout.
+
+Convert an RPM package file to an archive, using this command:
+#+begin_src bash
+$ rpm2archive bash-XXXX.rpm
+#+end_src
+to create the ~bash-XXXX.rpm.tgz~ file.
+
+Extract in one step by running the following command:
+#+begin_src bash
+cat bash-XXXX.rpm | rpm2archive - | tar -xvz
+#+end_src
+It is more direct and efficient than the older ~rpm2cpio~ utility, which can be used to convert package files to /cpio/ archives, or to extract files from the package file.
+
+A few different commands that you can use to complete listed tasks.
++ Convert an RPM package file to a cpio archive:
+  #+begin_src bash
+  rpm2cpio bash-XXXX.rpm > bash.cpio
+  #+end_src
++ Extract one or more files:
+  #+begin_src bash
+  rpm2cpio bash-XXXX.rpm | cpio -ivd bin/bash
+  rpm2cpio logrotate-XXXX.rpm | cpio --extract --make-directories
+  #+end_src
++ List files in a package;
+  #+begin_src bash
+  $ rpm -qlp bash-XXXX.rpm
+  #+end_src
+When doing so, all files are extracted relative to the current directory.
+So if the user is in the =/home/student= directory and extracts the =bin/bash= file as in the example above, it will be stored in =/home/student/bin/bash=.
+
+If all you want to do is list the files in a package, the easiest method is to use the rpm command itself:
+#+begin_src bash
+$ rpm -qilp package.rpm
+#+end_src
+**
 * DNF and YUM
 ** Overview
 ** dnf and yum
@@ -1048,4 +1343,3 @@ For example, see [[https:git.kernel.org/][git repositories]] web page. You can e
 * System Rescue
 ** Overview
 ** System Rescue
-
