@@ -1250,20 +1250,484 @@ $ rpm -qilp package.rpm
 #+end_src
 **
 * DNF and YUM
-** Overview
-** dnf and yum
+** What Is dnf?
+~dnf~ has a number of features that make it useful for package management. It is a front end to ~RPM~, but also has the capabilities to retrieve packages from one or more remote repositories.
+One of its best features is the ability to resolve dependencies. It is used by RHEL, CentOS, Fedora, and others.
 
+The configuration files for repositories are located in the =/etc/yum.repos.d= directory and have a ~.repo~ extension.
+A very simple repo file might look like:
+#+begin_src json
+[repo-name]
+    name=Description of the repository
+    baseurl=ht‌tp://somesystem.com/path/to/repo
+    enabled=1
+    gpgcheck=1
+#+end_src
+
+dnf caches information and databases to speed up performance. To remove some or all cached information you can run the following command:
+#+begin_src bash
+dnf clean [ packages | metadata | expire-cache | rpmdb | plugins | all ]
+#+end_src
+You can also toggle use of a particular repo on or off by changing the value of enabled, or using the ~--disablerepo somerepo~ and ~--enablerepo somerepo~ options.
+** yum
+~dnf~ replaced ~yum~ during the RHEL/CentOS 7 to 8 transition. Fedora has used ~yum~ even longer.
+If you try to run yum commands, /some versions of dnf will alert/ you that these are deprecated, and point you to the right command.
+
+~dnf~ is backwards compatible - almost all common yum commands still work.
+If you are an experienced yum user, you can gradually learn to use ~dnf~ because it accepts the subset of ~yum~ commands that take care of the majority of day-to-day tasks.
+
+For more information, see [[https:docs.fedoraproject.org/en-US/quick-docs/dnf/]["Using the DNF software package manager"]] and [[https:dnf.readthedocs.io/en/latest/]["DNF, the next-generation replacement for YUM"]].
+** Installing/Removing/Upgrading Packages
++ Install a package from a repository; also resolve and install dependencies:
+  #+begin_src bash
+  sudo dnf install package
+  #+end_src
++ Install a package from a local rpm file:
+  #+begin_src bash
+  sudo dnf localinstall package-file
+  #+end_src
++ Install a specific software group from a repository; also resolve and install dependencies for each package in the group:
+  #+begin_src bash
+  sudo dnf groupinstall 'group-name'
+  #+end_src
+** Additional dnf Commands
++ Lists additional dnf plugins:
+  #+begin_src bash
+  sudo dnf list "dnf-plugin*"
+  #+end_src
++ Shows a list of enabled repositories:
+  #+begin_src bash
+  sudo dnf repolist
+  #+end_src
++ Provides an interactive shell in which to run multiple dnf commands (the second form executes the commands in file.txt):
+  #+begin_src bash
+  sudo dnf shell
+  sudo dnf shell file.txt
+  #+end_src
++ Downloads the packages for you (it stores them in the =/var/cache/dnf= directory):
+  #+begin_src bash
+  sudo dnf install --downloadonly package
+  #+end_src
++ Views the history of dnf commands on the system, and with the correction options, even undoes or redoes previous commands:
+  #+begin_src bash
+  sudo dnf history
+  #+end_src
++ Cleans up locally stored files and metadata under =/var/cache/dnf=. This saves space and does house cleaning of obsolete data:
+  #+begin_src bash
+  sudo dnf clean [packages|metadata|expire-cache|rpmdb|plugins|all]
+  #+end_src
 * zypper
-** Overview
-** zypper
+** Whats zypper
+~zypper~ is the command line tool for installing and managing packages in SUSE Linux and openSUSE.
+It is very similar to dnf in its functionality and even in its basic command syntax, and also works with rpm packages.
 
+For use on SUSE-based systems, the zypper program provides a higher level of intelligent services for using the underlying rpm program, and plays the same role as dnf/yum on Red Hat-based systems.
+It can automatically resolve dependencies when installing, updating, and removing packages.
+It accesses external software repositories, synchronizing with them and retrieving and installing software as needed.
+** Queries
+
++ Shows a list of available updates:
+  #+begin_src bash
+  zypper list-updates
+  #+end_src
++ Lists available repositories:
+  #+begin_src bash
+  zypper repos
+  #+end_src
++ Searches repositories for string:
+  #+begin_src bash
+  zypper search <string>
+  #+end_src
++ Lists information about a package:
+  #+begin_src bash
+  zypper info firefox
+  #+end_src
++ Searches repositories to show what packages provide a file:
+  #+begin_src bash
+  zypper search --provides /usr/bin/firefox
+  #+end_src
+** Installing/Removing/Upgrading Packages with zypper
+
++ Installs or updates a package on the system:
+  #+begin_src bash
+  sudo zypper install firefox
+  #+end_src
++ Does not ask for confirmation when installing or upgrading (this is useful for scripts):
+  #+begin_src bash
+  sudo zypper --non-interactive install firefox
+  #+end_src
++ Updates all packages on system from a repository:
+  #+begin_src bash
+  sudo zypper update
+  #+end_src
++ Updates all packages on the system from a repository, but does not ask for confirmation (this is useful for scripts):
+  #+begin_src bash
+  sudo zypper --non-interactive update
+  #+end_src
++ Removes a package from the system:
+  #+begin_src bash
+  sudo zypper remove firefox
+  #+end_src
+Like with ~dnf~, you have to be careful with the removal command, as any package that needs the package being removed would be removed as well.
+** Additional zypper Commands
+Sometimes, a number of zypper commands must be run in a sequence.
++ To avoid re-reading all the databases for each command, you can run zypper in shell mode using the following command:
+  #+begin_src bash
+  $ sudo zypper shell
+  > install bash
+  ...
+  > exit
+  #+end_src
+  Because zypper supports the readline library, you can use all the same command line editing functions in the zypper shell available in the bash shell.
+
++ To add a new repository run this command:
+  #+begin_src bash
+  sudo zypper addrepo URI alias
+  #+end_src
+  which is located at the supplied URI and will use the supplied alias.
+
++ To remove a repository from the list, do:
+  #+begin_src bash
+  sudo zypper removerepo alias
+  #+end_src
+  while using the alias of the repository you want to delete.
+
++ To clean up and save space in the =/var/cache/zypp= directory, type the following command:
+  #+begin_src bash
+  sudo zypper clean [--all]
+  #+end_src
 * GIT Fundamentals
-** Overview
-** Introduction to GIT
-
+** Its Git
+** Look it up
 * Processes
-** Overview
-** Processes
+** What Is a Program?
+A program is a set of instructions, along with any internal data used while carrying the instructions out. Programs may also use external data.
+Internal data might include text strings inside the program, which are used to display user prompts.
+External data might include data from a database. Programs may consist of machine level instructions run directly by a CPU or a list of commands to be interpreted by another program.
+
+Programmers use various languages (such as C, C++, Perl, and many more) to code instructions in a program.
+Many user commands, such as ~ls~, ~cat~ and ~rm~ are programs which are external to the operating system kernel, or shell (in other words, they have their own executable program on disk).
+** What Is a Process?
+A process is an instance of a program in execution. It may be in a number of different states, such as running or sleeping.
++ Linux creates a new process for every program that is executed or run
++ Several processes may be executing the same program at the same time
++ The primary purpose of the operating system is to manage the execution of processes on behalf of users
+
+Every process has a ~pid~ (Process ID), a ~ppid~ (Parent Process ID), and a ~pgid~ (Process Group ID).
+In addition, every process has program code, data, variables, file descriptors, and an environment.
+
+Processes are controlled by scheduling, which is completely preemptive. Only the kernel has the right to preempt a process; they cannot do it to each other.
+
+For historical reasons, the largest PID has been limited to a 16-bit number, or 32768. It is possible to alter this value by changing =/proc/sys/kernel/pid_max=, since it may be inadequate for larger servers. As processes are created, eventually they will reach ~pid_max~, at which point they will start again at PID = 300.
+** Process Attributes
+All processes have certain attributes:
++ The program being executed
++ Context (state)
++ Permissions
++ Associated resources
+
+Every process is executing some program. At any given moment, the process may take a snapshot of itself by trapping the state of its CPU registers, where it is executing in the program, what is in the process' memory, and other information. This is the context of the process.
+
+Since processes can be scheduled in and out when sharing CPU time with others (or have to be put to sleep while waiting for some condition to be fulfilled, such as the user to make a request or data to arrive), being able to store the entire context when swapping out the process and being able to restore it upon execution resumption is critical to the kernel's ability to do context switching.
+
+Every process has permissions based on which user has called it to execute. It may also have permissions based on who owns its program file. Programs which are marked with an /”s”/ execute bit have a different /”effective”/ user id than their /”real”/ user id. These programs are referred to as ~setuid~ programs.
+They run with the user-id of the user who owns the program, where a non-setuid program runs with the permissions of the user who starts it.
+~setuid~ programs owned by root can be a security problem.
+
+The ~passwd~ command is an example of a /setuid program/. It is runnable by any user. When a user executes this program, the process runs with root permission in order to be able to update the write-restricted files, =/etc/passwd= and =/etc/shadow=, where the user passwords are maintained.
+
+Note that every process has resources such as allocated memory, file handles, etc.
+** Process Resource Isolation
+When a process is started, it is isolated in its own user space to protect it from other processes. This promotes security and creates greater stability.
+
+Processes do not have direct access to hardware.
+Hardware is managed by the kernel, so a process must use system calls to indirectly access hardware.
+System calls are the fundamental interface between an application and the kernel.
+** Controlling Processes with ulimit
+~ulimit~ is a built-in bash command that displays or resets process resource limits.
+You can see what running ulimit with the ~-a~ argument.
+
+A system administrator may need to change some of these values in either direction:
++ To restrict capabilities so an individual user and/or process cannot exhaust system resources, such as memory, cpu time or the maximum number of processes on the system.
++ To expand capabilities so a process does not run into resource limits; for example, a server handling many clients may find that the default of 1024 open files makes its work impossible to perform.
+*** Setting Limits
+You can set any particular limit by running the following command:
+#+begin_src bash
+$ ulimit [options] [limit]
+$ ulimit -n 1600
+#+end_src
+which would increase the maximum number of file descriptors to 1600.
+
+Note that the changes only affect the current shell. To make changes that are effective for all logged-in users, you need to modify =/etc/security/limits.conf=, a very nicely self-documented file, and then reboot.
+*** Hard and Soft Limits
+There are two kinds of limits:
++ Hard
+  The maximum value, set only by the root user, that a user can raise the resource limit to.
+  #+begin_src bash
+  $ ulimit -H -n
+  4096
+  #+end_src
++ Soft
+  The current limiting value, which a user can modify, but cannot exceed the hard limit.
+  #+begin_src bash
+  $ ulimit -S -n
+  1024
+  #+end_src
+** Creating Processes
+An average Linux system is always creating new processes. This is often called forking; the original parent process keeps running, while the new child process starts.
+
+Often, rather than just a fork, one follows it with an /exec/, where the parent process terminates, and the child process inherits the process ID of the parent.
+The term /fork/ and /exec/ is used so often, people think of it sometimes as one word.
+
+Older UNIX systems often used a program called ~spawn~, which is similar in many ways to /fork/ and /exec/, but differs in details.
+It is not part of the POSIX standard and is not a normal part of Linux.
+
+To see how new processes may start, consider a web server that handles many clients.
+It may launch a new process every time a new connection is made with a client.
+On the other hand, it may simply start only a new thread as part of the same process; in Linux, there really is not much difference on a technical level between creating a full process or just a new thread, as each mechanism takes about the same time and uses roughly the same amount of resources.
+
+As another example, the ~sshd~ daemon is started when the ~init~ process executes the ~sshd init~ script, which then is responsible for launching the ~sshd~ daemon.
+This daemon process listens for ~ssh~ requests from remote users.
+When a request is received, ~sshd~ creates a new copy of itself to service the request. Each remote user gets their own copy of the ~sshd~ daemon running to service their remote login.
+The ~sshd~ process will start the login program to validate the remote user. If the authentication succeeds, the login process will fork off a shell (say bash) to interpret the user commands, and so on.
+
+Internal kernel processes take care of maintenance work, such as making sure buffers get flushed out to disk, that the load on different CPUs is balanced evenly, that device drivers handle work that has been queued up for them to do, etc. These processes often run as long as the system is running, sleeping except when they have something to do.
+
++ The first user process is called ~init~ and has ~pid = 1~
++ Subsequent processes are forked from init or other running processes
++ Forking from a parent produces a child process, in every way a equal and a peer of the parent
++ If the parent dies, the child is /"adopted"/ by init
++ There are also kernel-created processes; these have names ~sur~- rounded by *[..]* in the output from ~ps~
+
+SystemD based systems run kthreadd, which spawns with a pid=2 and handles orphaned processes.
+** Creating Processes in a Command Shell
+
+When a user executes a command in a command shell interpreter, such as bash, the following takes place:
+
++ A new process is created (forked from the user's login shell)
++ A wait system call puts the parent shell process to sleep
++ The command is loaded onto the child process's space via the exec system call, replacing bash
++ The command completes executing, and the child process dies via the exit system call
++ The parent shell is re-awakened by the death of the child process and proceeds to issue a new shell prompt
++ The parent shell then waits for the next command request from the user, at which time the cycle will be repeated.
+
+If a command is issued for background processing (by adding an ampersand *&* at the end of the command line), the parent shell skips the wait request and is free to issue a new shell prompt immediately, allowing the background process to execute in parallel.
+Otherwise, for foreground requests, the shell waits until the child process has completed or is stopped via a signal.
+
+Some shell commands (such as ~echo~ and ~kill~) are built into the shell itself, and do not involve loading of program files. For these commands, neither a /fork/ nor an /exec/ is issued for the execution.
+** Background and Foreground Processes
+Foreground jobs run from the shell, delaying access to the shell until the job has finished.
+This may not be a problem, but if the job takes a long time to complete, putting it in the background frees up the shell for further interactive work.
+The background job will run at a lower priority, allowing interactive work to go smoothly. You can also log off the terminal window without affecting the background job.
+
+Processes run in the foreground by default.
+
+Adding an ampersand (*&*) after a command will run the command in the background:
+#+begin_src bash
+$ sudo updatedb &
+#+end_src
+- ~CTRL-Z~ suspends a foreground process.
+- ~bg~ makes it run in the background.
+- ~fg~ puts it in the foreground.
+- ~CTRL-C~ terminates a foreground process.
+#+begin_src bash
+$> updatedb &
+[1] 22209
+$> sleep 100
+^Z
+
+[2]+  Stopped   sleep 100
+#+end_src
+** Managing Jobs
+The jobs command shows background processes in the current terminal.
+It shows the job ID, the state and the command name:
+#+begin_src bash
+$> jobs
+1 -  Running    updatedb &
+2 +  Stopped    sleep 10
+#+end_src
+Job IDs can be used with bg and fg.
+
+#+begin_src bash
+$ jobs -l
+#+end_src
+will provide the PID for the job.
+
+The background jobs are still somewhat connected to the terminal window, in that if you log off, jobs will no longer show the jobs started from that window.
+** Using at to Start in the Future
+~at~ executes any non-interactive command at a specified time.
+By entering ~at~ with the future time, the interactive part of ~at~ will start. At the prompt, enter in the command to run, hit enter, then CTRL-D to exit.
+You then use ~atq~ to see the job information, or delete queued jobs.
+
+Start the command after a delay (command and output):
+#+begin_src bash
+$ at now + 2 days
+at> mail < /var/log/messages admin@example.com
+at> <EOT>
+job 1 at 2013-01-16 13:24
+#+end_src
+Use CTRL-D to insert the EOT character.
+** cron
+~cron~ is a very useful and flexible tool. It is used for any job that needs to run on a regular schedule, scheduling commands at specific intervals (e.g., backups).
+
+Tasks can be queued to run every hour, every day, once a week or once a month, or even every 10 seconds.
+A Mail will be sent when a job has completed or failed.
+
+cron can be managed in different ways:
+
++ ~crontab~ lets users specify jobs
++ =/etc/cron.d/= can be extended with formatted job files
++ =/etc/cron.{hourly,daily,weekly,monthly}= can contain any system script
+
+While ~cron~ has been used in UNIX-like operating systems for decades, modern Linux distributions have moved over to ~anacron~, as will be explained shortly.
+
+Command and output:
+#+begin_src bash
+$ ls -l /etc/cron.d
+total 16
+-rw-r--r-- 1 root root 128 Mar 29 2017 0hourly
+-rw-r--r-- 1 root root 78 Dec 29 09:24 atop
+-rw-r--r-- 1 root root 108 Jun 13 2017 raid-check
+-rw------- 1 root root 235 Mar 29 2017 sysstat
+#+end_src
+** anacron
+On older Linux systems, crontab contained information about when to run the jobs in the =/etc/cron.*= subdirectories.
+However, it was implicitly assumed the machine was always running. If the machine was powered off, scheduled jobs would not run.
+
+~anacron~ has replaced ~cron~ on modern systems. ~anacron~ will run the necessary jobs in a controlled and staggered manner when the system is running. The key configuration file is =/etc/anacrontab=.
+
+You can see an example anacron configuration file below:
+#+begin_src bash
+# /etc/anacrontab: configuration file for anacron
+
+# See anacron(8) and anacrontab(5) for details.
+
+SHELL=/bin/sh
+PATH=/sbin:/bin:/usr/sbin:/usr/bin
+MAILTO=root
+# the maximal random delay added to the base delay of the jobs
+RANDOM_DELAY=45
+# the jobs will be started during the following hours only
+START_HOURS_RANGE=3-22
+
+#period in days delay in minutes job-identifier command
+
+1         5   cron.daily     nice run-parts  /etc/cron.daily
+7        25   cron.weekly    nice run-parts  /etc/cron.weekly
+@monthly 45   cron.monthly   nice run-parts  /etc/cron.monthly
+#+end_src
+** Process States
+Processes can be in one of several possible states.
++ Running
+  A process in the Running state is either currently receiving attention from the CPU (in other words, executing) or waiting in a queue ready to run.
+  A queued process will be selected to run when its priority has elevated it to first in the queue and the operating system has an idle CPU.
++ Waiting (Sleeping)
+  A process in the Waiting (or Sleeping) state is waiting on a request that it has made (usually I/O) and cannot proceed further until the request is completed.
+  When the request is completed, an event interrupts the O/S to allow a CPU to be reassigned to the waiting process and it will continue processing.
++ Stopped
+  A process may be Stopped, meaning execution of instructions has been suspended.
+  This state is commonly experienced when a programmer wants to examine the executing programs memory, CPU registers, flags or other attributes.
+  Once this is done, the process may be resumed.
++ Zombie
+  A Zombie state is entered when a process terminates. Zombie processes are important, because each Zombie continues to take up space in the O/S’s process table.
+  The process table has an entry for each active process in the system.
+  A Zombie process has all of its resources released except its process table entry.
+
+The scheduler manages all of the processes. Process state is reported by process listings.
+** Two Execution Modes
+At any given time, a process (or any particular thread of a multi-threaded process) may be executing in either user mode or system mode, which is usually called ~kernel mode~ by kernel developers.
+
+What instructions can be executed depends on the mode and is enforced at the hardware, not software, level.
+The mode is not a state of the system; it is a state of the processor, as in a multi-core or multi-CPU system each unit can be in its own individual state.
+
+In Intel parlance, ~user mode~ is also termed Ring 3, and ~system mode~ is termed Ring 0.
+
+*** User Mode
+Except when executing a /system call/, processes execute in /user mode/, where they have lesser privileges than in the /kernel mode/.
+
+When a process is started, it is isolated in its own user space to protect it from other processes.
+This promotes security and creates greater stability. This is sometimes called /process resource isolation/.
+
+Each process executing in /user mode/ has its own memory space, parts of which may be shared with other processes; except for the shared memory segments, a user process is not able to read or write into or from the memory space of any other process.
+
+Even a process run by the root user or as a ~setuid~ program runs in user mode, except when jumping into a system call, and has only limited ability to access hardware.
+
+When an application needs to execute a privileged operation, it makes a system call to cause the kernel to perform that action. =User Mode > System Call > Kernel Mode > Return > User Mode=
+
+*** System (Kernel) Mode
+In kernel (system) mode, the CPU has full access to all hardware on the system, including peripherals, memory, disks, etc. If an application needs access to these resources, it must issue a system call, which causes a context switch from user mode to kernel mode.
+This procedure must be followed when reading and writing from files, creating a new process, etc.
+
+Application code never runs in /kernel mode/, only the system call itself which is kernel code.
+When the system call is complete, a return value is produced and the process returns to user mode with the inverse context switch.
+
+There are other times when the system is in kernel mode that have nothing to do with processes, such as when handling hardware interrupts or running the scheduling routines and other management tasks for the system.
+** Daemons
+A ~daemon~ process is a background process whose sole purpose is to provide some specific service to users of the system. Here are some more information about daemons:
+- They can be quite efficient because they only operate when needed
+- Many daemons are started at boot time
+- Daemon names often (but not always) end with d, e.g. ~httpd~ and ~systemd-udevd~
+- Daemons may respond to external events (~systemd-udevd~) or elapsed time (~crond~)
+- Daemons generally have no controlling terminal and no standard input/output devices
+- Daemons sometimes provide better security control
+- Some examples include ~xinetd~, ~httpd~, ~lpd~, and ~vsftpd~
+** Using nice to Set Priorities
+Process priority can be controlled through the ~nice~ and ~renice~ commands.
+Every process has a nice value which affects the process’s execution priority
+
++ ~nice~ can raise or lower a process’ priority by adjusting its ~nice~ value
++ Higher ~nice~ values lower the priority
++ Lower ~nice~ values raise the priority
+
+~Nice~ value can range from -20 (lowest nice, highest priority) to +19 (highest nice, lowest priority).
+Note that only the superuser can lower a ~nice~ value but any user can raise their process’ ~nice~ value.
+By default, a process has a ~nice~ value of 0 which is inherited from the shell.
+
+~nice~ can be used to run a process with a specific nice value. The command:
+#+begin_src bash
+$ nice -n 10 myprog
+#+end_src
+runs myprog with a nice value of 10.
+
+#+begin_src bash
+$ nice -n 19 myprog
+#+end_src
+runs myprog with the lowest priority, a nice value of 19.
+
+#+begin_src bash
+$ nice -n -20 myprog
+#+end_src
+runs myprog with the highest priority, a nice value of -20.
+
+If you do not give a ~nice~ value, the default is to increase the niceness by 10. If you give no arguments at all, you report your current niceness.
+
+Note that increasing the niceness of a process does not mean it won't run; it may even get all the CPU time if there is nothing else to compete with.
+** Modifying the Nice Value
+~renice~ is used to raise or lower the nice value of an already running process.
+It basically lets you change the nice value on the fly.
+
+#+begin_src bash
+$ renice --help
+
+Usage:
+renice [-n] <priority> [-p|--pid] <pid>...
+renice [-n] <priority> -g|--pgrp <pgid>...
+renice [-n] <priority> -u|--user <user>...
+#+end_src
+Raise the nice value of pid 20003 to 5 with this command:
+#+begin_src bash
+$ renice +5 -p 20003
+#+end_src
+By default, only a superuser can decrease the niceness; i.e., increase the priority.
+However, it is possible to give normal users the ability to decrease their niceness within a predetermined range, by editing the following file: =/etc/security/limits.conf=.
+
+After a non-privileged user has increased the nice value, only a superuser can lower it back.
+
+To change the niceness of an already running process, it is easy to use the renice command, as in:
+#+begin_src bash
+$ renice +3 13848
+#+end_src
+which will reset the niceness to 3 for the process with ~pid = 13848~. More than one process can be done at the same time, and there are some other options, so see ~man renice~.
 
 * Process Monitoring
 ** Overview
