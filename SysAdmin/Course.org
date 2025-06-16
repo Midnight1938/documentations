@@ -1730,9 +1730,110 @@ $ renice +3 13848
 which will reset the niceness to 3 for the process with ~pid = 13848~. More than one process can be done at the same time, and there are some other options, so see ~man renice~.
 
 * Process Monitoring
-** Overview
-** Process Monitoring
+** Process Monitoring Tools
+To monitor processes, Linux administrators make use of many utilities, such as ps, pstree and top, all of which have long histories in UNIX-like operating systems.
 
+Here is a list of some of the main tools for process monitoring.
+
+| Tool     | Purpose                                   |
+| -----    | -------                                   |
+| ~top~    | Process activity, dynamically updated     |
+| ~uptime~ | Detailed information about processes      |
+| ~ps~     | Detailed information about processes      |
+| ~pstree~ | A tree of processes and their connections |
+mpstat	Multiple processor usage
+iostat	CPU utilization and I/O statistics
+sar	Display and collect information about system activity
+numastat	Information about NUMA (Non-Uniform Memory Architecture)
+strace	Information about all system calls a process makes
+
+The =/proc= filesystem can also be helpful in monitoring processes, as well as other items, on the system.
+** Troubleshooting Levels
+ Even the best administered Linux systems will develop problems.
+
+Troubleshooting can isolate whether the problems arise from software or hardware, as well as whether they are local to the system, or come from within the local network or the Internet.
+
+Troubleshooting properly requires judgment and experience, and while it will always be somewhat of an art form, following good methodical procedures can really help isolate the sources of problems in a reproducible fashion.
+
+There are three levels of troubleshooting:
+
++ Beginner: Can be taught very quickly
++ Experienced: Comes after a few years of practice
++ Wizard: Some people think you have to be born this way, but that is nonsense; all skills can be learned
+** Basic Troubleshooting Techniques
+Sometimes the ruling philosophy and methodology requires following a very established procedure; making leaps based on intuition is discouraged.
+The motivation for using a checklist and uniform procedure is to avoid reliance on a wizard, to ensure any system administrator will be able to eventually solve a problem if they adhere to well known procedures. Otherwise, if the wizard leaves the organization, there is no one skilled enough to solve tough problems.
+
+If, on the other hand, you elect to respect your intuition and check hunches, you should make sure you can get sufficient data quickly enough to decide whether or not to continue or abandon an intuitive path, based on whether it looks like it will be productive.
+
+While ignoring intuition can sometimes make solving a problem take longer, the troubleshooter’s previous track record is the critical benchmark for evaluating whether to invest resources this way. In other words, useful intuition is not magic, it is distilled experience.
+
++ Characterize the problem
++  Reproduce the problem
++ Always try the easy things first
++ Eliminate possible causes one at a time
++ Change only one thing at a time; if that does not fix the problem, change it back
++ Check the system logs (=var/log/messages= =var/log/secure= etc.) for further information
+** Viewing Process States with ps
+~ps~ is a workhorse for displaying process characteristics and statistics, garnered from the =/proc= directory.
+
+Some common choices of options (commands) are:
+#+begin_src bash
+ps aux
+ps -elf
+ps -eL
+ps -C "bash"
+#+end_src
+This command utility has existed in all UNIX-like operating system variants, and that diversity is reflected in the complicated potpourri of options that the Linux version of ps accepts, which fall into three categories:
+
++ UNIX options, which must be preceded by -, and which may be grouped.
++ BSD options, which must not be preceded by -, and which may be grouped.
++ GNU long options, each of which must be preceded by --.
+
+Having all these possible options can make life rather confusing. Most system administrators tend to use one or two standard combinations for their daily use.
+** Customizing the ps Output
+Using the ~-o~ option, followed by a comma-separated list of field identifiers, allows the user to print out a selected list of ps fields:
+
++ pid: Process ID
++ uid: User ID of process owner
++ cmd: Command with all arguments
++ cputime: Cumulative CPU time
++ pmem: Ratio of the process's resident set size to the physical memory on the machine, expressed as a percentage
+
+You can consult the ~ps man~ page for many other output options.
+Another common options choice is ~-elf~
+
+** Using pstree
+pstree gives a visual description of the process ancestry and multi-threaded applications.
+#+begin_src bash
+$ pstree -aAp 2408
+
+bash,2408
+|-emacs,24998 pmonitor.tex
+|   |-{emacs},25002
+|   `-{emacs},25003
+|-evince,18036 LFS201-SLIDES.pdf
+|   |-{evince},18040
+|   |-{evince},18046
+|   `-{evince},18047
+#+end_src
+Use ~-p~ to show process IDs, use ~-H~ [pid] to highlight [pid] and its ancestors.
+
+Consult the man page for pstree for an explanation of many options; in the first example, we have chosen just to show information for ~pid=2408~.
+Note that one of its child processes (evince, ~pid=18036~) has three children of its own.
+
+** top
+~top~ is used to display processes with the highest CPU usage. Processes are initially sorted by CPU usage.
+
+If not run in secure mode (~top s~), the user can signal processes:
+
++ Press the k key
++ Give a PID when prompted
++ Give a signal number when prompted
+
+~top~ is an ancient utility that has a ton of options, as well as interactive commands triggered when certain keys are pressed.
+** More on /proc
+The =/proc= filesystem is an interface to the kernel data structures. =/proc= contains a subdirectory for each active process, named by the process id (PID). =/proc/self= is the currently executing process. Some tunable parameters are in the =/proc= directories. For more info, see the proc man page.
 * Memory Monitoring, Usage and Configuring Swap
 ** Overview
 ** Memory Monitoring, Usage and Configuring Swap
