@@ -1835,51 +1835,1615 @@ If not run in secure mode (~top s~), the user can signal processes:
 ** More on /proc
 The =/proc= filesystem is an interface to the kernel data structures. =/proc= contains a subdirectory for each active process, named by the process id (PID). =/proc/self= is the currently executing process. Some tunable parameters are in the =/proc= directories. For more info, see the proc man page.
 * Memory Monitoring, Usage and Configuring Swap
-** Overview
-** Memory Monitoring, Usage and Configuring Swap
+** Memory Monitoring
+Over time, systems have become more demanding of memory resources and at the same time RAM prices have decreased and performance has improved.
+Yet, it is often the case that bottlenecks in overall system performance and throughput are memory-related; the CPUs and the I/O subsystem can be waiting for data to be retrieved from or written to memory.
+
+There are many tools for monitoring, debugging and tuning a system’s behavior with regard to its memory.
+
+Tuning the memory sub-system can be a complex process. First of all, one has to take note that memory usage and I/O throughput are intrinsically related, as, in most cases, most memory is being used to cache the contents of files on disk.
+Thus, changing memory parameters can have a large effect on I/O performance, and changing I/O parameters can have an equally large converse effect on the virtual memory sub-system.
+
+| Utility | Purpose                                                               | Package |
+| free    | Brief summary of memory usage                                         | procps  |
+| vmstat  | Detailed virtual memory statistics and block I/O, dynamically updated | procps  |
+| pmap    | Process memory map                                                    | procps  |
+** /proc/meminfo
+The pseudofile =/proc/meminfo= contains a wealth of information about how memory is being used.
+
+#+begin_src bash
+$ cat /proc/meminfo
+
+MemTotal:      16265960 kB
+MemFree:       10481080 kB
+MemAvailable:  12596456 kB
+Buffers:         177824 kB
+Cached:         2768600 kB
+SwapCached:           0 kB
+...
+#+end_src
+** /proc/sys/vm
+The =/proc/sys/vm= directory contains many tunable knobs to control the Virtual Memory system. Exactly what appears in this directory will depend somewhat on the kernel version.
+Almost all of the entries are writable (by root).
+
+Values can be changed either by directly writing to the entry, or using the sysctl utility.
+
+When tweaking parameters in =/proc/sys/vm=, the usual best practice is to adjust one thing at a time and look for effects.
+The primary (inter-related) tasks are:
++ Controlling flushing parameters; i.e., how many pages are allowed to be dirty and how often they are flushed out to disk
++ Controlling swap behavior; i.e., how much pages that reflect file contents are allowed to remain in memory, as opposed to those that need to be swapped out as they have no other backing store
++ Controlling how much memory overcommission is allowed, since many programs never need the full amount of memory they request, particularly because of copy on write (COW) techniques
+  Copy On Write simply means that a copy of the data is made before editing so that the original data can be reused by other programs.
+
+Memory tuning can be subtle: what works in one system situation or load may be far from optimal in other circumstances.
+** vmstat
+vmstat is a multi-purpose tool that displays information about memory, paging, I/O, processor activity and processes. It has many options. The general form of the command is:
+#+begin_src bash
+$ vmstat [options] [delay] [count]
+#+end_src
+If delay is given in seconds, the report is repeated at that interval count times; if count is not given, vmstat will keep reporting statistics forever, until it is killed by a signal, such as Ctrl-C.
+
+If no other arguments are given, you can see what vmstat displays, where the first line shows averages since the last reboot, while succeeding lines show activity during the specified interval.
+#+begin_src bash
+$ vmstat 2 4
+#+end_src
+If the option -S m is given, memory statistics will be in MB instead of KB.
+
+With the -a option, vmstat displays information about active and inactive memory, where active memory pages are those which have been recently used; they may be clean (disk contents are up to date) or dirty (need to be flushed to disk eventually). By contrast, inactive memory pages have not been recently used and are more likely to be clean and are released sooner under memory pressure.
+Memory can move back and forth between active and inactive lists, with new references, or a long time between uses.
+
+If you just want to get some quick statistics on only one partition, use the ~-p~ option:
+** Using swap
+
+Linux employs a virtual memory system, in which the operating system can function as if it had more memory than it really does. This kind of memory overcommission functions in two ways:
+
++ Many programs do not actually use all the memory they are given permission to use. Sometimes, this is because child processes inherit a copy of the parent's memory regions utilizing a COW (Copy On Write) technique, in which the child only obtains a unique copy (on a page-by-page basis) when there is a change.
++ When memory pressure becomes important, less active memory regions may be swapped out to disk, to be recalled only when needed again.
+
+Such swapping is usually done to one or more dedicated partitions or files; Linux permits multiple swap areas, so the needs can be adjusted dynamically. Each area has a priority, and lower priority areas are not used until higher priority areas are filled.
+
+In most situations, the recommended swap size is the total RAM on the system. You can see what your system is currently using for swap areas by looking at the =/proc/swaps= file and report on current usage with free.
+
+#+begin_src bash
+$ cat /proc/swaps
+
+Filename     Type       Size    Used Priority
+/dev/sda6    partition  8290300 0    -1
+/tmp/swpfile file       102396  0    -2
+#+end_src
+
+The commands involving swap are:
+
++ mkswap: format swap partitions or files
++ swapon: activate swap partitions or files
++ swapoff: deactivate swap partitions or files
+
+At any given time, most memory is in use for caching file contents to prevent actually going to the disk any more than necessary, or in a sub-optimal order or timing. Such pages of memory are never swapped out as the backing store is the files themselves, so writing out to swap would be pointless; instead, dirty pages (memory containing updated file contents that no longer reflect the stored data) are flushed out to disk.
+
+It is also worth pointing out that in Linux, memory used by the kernel itself, as opposed to application memory, is never swapped out, in distinction to some other operating systems.
+** OOM Killer
+The simplest way to deal with memory pressure would be to permit memory allocations to succeed as long as free memory is available and then fail when all memory is exhausted.
+
+The second simplest way is to use swap space on disk to push some of the resident memory out of core; in this case, the total available memory (at least in theory) is the actual RAM plus the size of the swap space. The hard part of this is to figure out which pages of memory to swap out when pressure demands. In this approach, once the swap space itself is filled, requests for new memory must fail.
+
+Linux, however, goes one better; it permits the system to overcommit memory, so that it can grant memory requests that exceed the size of RAM plus swap. While this might seem foolhardy, many (if not most) processes do not use all requested memory.
+
+An example would be a program that allocates a 1 MB buffer, and then uses only a few pages of the memory. Another example is that every time a child process is forked, it receives a copy of the entire memory space of the parent. Because Linux uses the COW (copy on write) technique, unless one of the processes modifies memory, no actual copy needs be made. However, the kernel has to assume that the copy might need to be done.
+
+Thus, the kernel permits overcommission of memory, but only for pages dedicated to user processes; pages used within the kernel are not swappable and are always allocated at request time.
+Which processes are terminated is selected by the OOM (Out of Memory) killer.
+
+** OOM Killer Algorithms
+One can modify and even turn off overcommission by setting the value of =/proc/sys/vm/overcommit_memory=:
+
++ 0: (default)
+  Permit overcommission, but refuse obvious overcommits, and give root users somewhat more memory allocation than normal users.
++ 1:
+  All memory requests are allowed to overcommit.
++ 2:
+  Turn off overcommission. Memory requests will fail when the total memory commit reaches the size of the swap space plus a configurable percentage (50 by default) of RAM.
+  This factor is modified changing =/proc/sys/vm/overcommit_= ratio.
+
+A heuristic algorithm is not intended to be depended on for normal operations. It is there more for a graceful shutdown or retrenchment.
+
+Process selection depends on a badness value, which can be read from =/proc/[pid]/oom_score= for each process.
+
+Adjustments can be made to a process’s oom_adj_score in the same directory for each task.
+
+An amusing take on this was given by [[https://lwn.net/Articles/104185/][Andries Brouwer]]:
+#+begin_quote
+An aircraft company discovered that it was cheaper to fly its planes with less fuel on board. The planes would be lighter and use less fuel and money was saved. On rare occasions however the amount of fuel was insufficient, and the plane would crash. This problem was solved by the engineers of the company by the development of a special OOF (out-of-fuel) mechanism. In emergency cases a passenger was selected and thrown out of the plane. (When necessary, the procedure was repeated.) A large body of theory was developed and many publications were devoted to the problem of properly selecting the victim to be ejected. Should the victim be chosen at random? Or should one choose the heaviest person? Or the oldest? Should passengers pay in order not to be ejected, so that the victim would be the poorest on board? And if for example the heaviest person was chosen, should there be a special exception in case that was the pilot? Should first class passengers be exempted? Now that the OOF mechanism existed, it would be activated every now and then, and eject passengers even when there was no fuel shortage. The engineers are still studying precisely how this malfunction is caused.
+#+end_quote
 
 * I/O Monitoring
-** Overview
-** I/O Monitoring and Tuning
+** I/O Monitoring and Disk Bottlenecks
+Disk performance problems can be strongly coupled to other factors, such as insufficient memory or inadequate network hardware and tuning. Disentangling can be difficult.
+
+As a rule, a system can be considered as I/O-bound when the CPU is found sitting idle waiting for I/O to complete, or the network is waiting to clear buffers.
+
+However, one can be misled. What appears to be insufficient memory can result from too slow I/O; if memory buffers that are being used for reading and writing fill up, it may appear that memory is the problem, when the real problem is that buffers are not filling up or emptying out fast enough. Similarly, network transfers may be waiting for I/O to complete and cause network throughput to suffer.
+
+Both real-time monitoring and tracing are necessary tools for locating and mitigating disk bottlenecks. However, rare or non-repeating problems can make this difficult to accomplish.
+There are many relevant variables and I/O tuning is complex. We will also consider I/O scheduling later.
+** iostat
+~iostat~ is the basic workhorse utility for monitoring I/O device activity on the system.
+It can generate reports with a lot of information, with the precise content controlled by options. The general form of the command is:
+#+begin_src bash
+$ iostat [OPTIONS] [devices] [interval] [count]
+#+end_src
+
+After a brief summary of CPU utilization, I/O statistics are given: tps (I/O transactions per second; logical requests can be merged into one actual request), blocks read and written per unit time, where the blocks are generally sectors of 512 bytes; and the total blocks read and written.
+
+Information is broken out by disk partition (and if LVM is being used also by dm, or device mapper, logical partitions).
+A somewhat different display is generated by giving the ~-k~ option, which shows results in KB instead of blocks. You can also use ~-m~ to get results in MB.
+
+A much more detailed report can be obtained by using the ~-x~ option (for extended), as in the following command:
+#+begin_src bash
+$ iostat -xk
+#+end_src
+** iotop
+Another very useful utility is iotop, which must be run as root. It displays a table of current I/O usage and updates periodically, like top.
+_In the PRIO column, be stands for best effort and rt stands for real time._
+
+Available options can be shown by using the --help option, such as in the following command:
+#+begin_src bash
+$ iotop --help
+#+end_src
+Using the ~-o~ option can be useful to avoid clutter.
+** Useful Tools
++ ~Bonnie++~
+  bonnie++ is a widely available benchmarking program that tests and measures the performance of drives and filesystems. It is descended from bonnie, an earlier implementation.
+  Results can be read from the terminal window or directed to a file, and also to a csv format Companion programs, boncsv2.html and boncsv2.txt, can be used to convert to html and plain text output formats.
++ ~FS_Mark~
+  The fs_mark benchmark gives a low level bashing to file systems, using heavily asynchronous I/O across multiple directories and drives.
+  It’s a rather old program written by Rick Wheeler that has stood the test of time.
 
 * Containers
-** Overvie
-** Container
+** Container Types
+Using Linux kernel features, including namespaces and cgroups, it is possible to provide a lightweight instance of an OS or application that shares the host kernel. Initially, Linux Containers or LXC was created to allow an entire virtual OS with an init, an entire set of system tools, and also an application to be virtualized as a container.
+
+Next came Application Containers, starting with Docker, and then generically referred as OCI containers; these containers typically do not include an entire OS (although they can), enabling smaller images, often with just one application or function.
+
+Today there are many OCI-compatible technologies to run such application containers, including: podman, runc, firecracker, apptainer, and rkt.
+
+We are going to focus on Docker and the docker-compose functionality in this chapter, although most of the techniques translate directly to other OCI runtimes. Generally, images in container registries that specify Docker can be used in any other runtime with minor modifications.
 * Linux Filesystems and the VFS
-** Overview
-** Linux Filesystems and the VFS
+** Filesystem Basics
+Application programs read and write files, rather than dealing with physical locations on the actual hardware on which files are stored. Filesystems create a usable format on a physical partition.
+
+Files and their names are an abstraction camouflaging the physical I/O layer. Directly writing to disk from the command line (ignoring the filesystem layer) is very dangerous and is usually only done by low-level operating system software and not by user applications. An exception is some very high-end software such as enterprise data bases that do such cmd access to skip filesystem-related latency.
+
+A UNIX-like filesystem uses a tree hierarchy:
+
++ Directories contain files and/or other directories
++ Every path or node is under the root (/) directory
+
+Multiple filesystems may be (and usually are) merged together into a single tree structure. Linux uses a virtual filesystem layer (VFS) to communicate with the filesystem software.
+
+Local filesystems generally reside within a disk partition which can be a physical partition on a disk, or a logical partition controlled by a Logical Volume Manager (LVM). Filesystems can also be of a network nature and their true physical embodiment completely hidden to the local system across the network.
+** Inodes
+The name of a file is just a property of its inode, which is the more fundamental object. An inode is a data structure on disk that describes and stores file attributes, including its location. Every file which is contained in a Linux filesystem is associated with its own inode. All data about a file is contained within its inode. The inode is used by the operating system to keep track of properties such as location, file attributes (permissions, ownership, etc.), access times and other items. Because of this, all I/O activity concerning a file usually also involves the file’s inode.
+
+For each file in a directory, there exists both a filename and an inode number, both of which are stored in the data structure. The filenames are not stored in the inode, they are stored in the directory.
+
+Inodes describe and store information about a file, including:
+
++ Permissions​
++ User and group ownership​
++ Size​
++ Timestamps (nanosecond)
+  - ​Access time - The last time the file was accessed for any purpose
+  - Modification time - The last time the file's contents were modified
+  - Change time - The last time the file's inode was changed, by a change in permissions, ownership, filename, hard links, etc.
+** Hard and Soft Links
+A directory file is a particular type of file that is used to associate file names and inodes. There are two ways to associate (or link) a file name with an inode:
+
++ Hard links point to an inode.​ They are made by using ln without an option. Two or more files can point to the same inode (hard link). All hard linked files have to be on the same filesystem. Changing the content of a hard linked file in one place may not change it in other places.
++ Soft (or symbolic) links point to a file name which has an associated inode. They are made by using ln with the -s option. Soft linked files may be on different filesystems. If the target does not yet exist or is not yet mounted, it can be dangling.
+
+Each association of a directory file contents and an inode is known as a link. Additional links can be created using ln.
+
+Because it is possible (and quite common) for two or more directory entries to point to the same inode (hard links), a file can be known by multiple names, each of which has its own place in the directory structure. However, it can have only one inode no matter which name is being used.
+
+When a process refers to a pathname, the kernel searches directories to find the corresponding inode number. After the name has been converted to an inode number, the inode is loaded into memory and is used by subsequent requests.
+
+Normally, when you modify a file it does not break the hard links that reference the same inode. However, there are (badly written) applications that can copy a file and change it and then replace it, or delete a file and replace it, and in the process create a new file that is not linked any more. So keep your eye out for this behavior if it is not intended.
+** Virtual Filesystem (VFS)
+Linux implements a Virtual File System (VFS), as do all modern operating systems. When an application needs to access a file, it interacts with the VFS abstraction layer, which then translates all the I/O system calls (reading, writing, etc.) into specific code relevant to the particular actual filesystem.
+
+Thus, neither the specific actual filesystem or physical media and hardware on which it resides need be considered by applications. Furthermore, network filesystems (such as NFS) can be handled transparently.
+
+This permits Linux to work with more filesystem varieties than any other operating system. This democratic attribute has been a large factor in its success.
+
+Most filesystems have full read and write access, while a few have only read access and perhaps experimental write access. Some filesystem types, especially non-UNIX based ones, may require more manipulation in order to be represented in the VFS.
+
+Variants such as vfat do not have distinct read/write/execute permissions for the owner/group/world fields; the VFS has to make an assumption about how to specify distinct permissions for the three types of user, and such behavior can be influenced by mounting operations. There are non-kernel filesystem implementations, such as the read/write [[https:sourceforge.net/projects/ntfs-3g/][ntfs-3g]], which are reliable but have weaker performance than in-kernel filesystems.
+** Available Filesystems
+Linux works with more filesystem varieties than any other operating system. This democratic flexibility has been a large factor in its success. Most filesystems have full read/write access, while a few have read only access. Native (kernel) filesystems tend to have full read/write access, while those from other operating systems or specialized ones may have only read access or experimental write access. Some key-value filesystems (like S3-compatible) ones might not even allow every file operation and are often available via FUSE in userspace.
+
+Commonly used filesystems include ext4, xfs, btrfs, squashfs, nfs and vfat. A list of currently supported kernel filesystems is available at /proc/filesystems.
+
+You can see a list of the filesystem types currently registered and understood by the currently running Linux kernel by running the following command:
+#+begin_src bash
+$ cat /proc/filesystems
+
+nodev sysfs        nodev bpf         nodev autofs
+nodev tmpfs        nodev pipefs      nodev mqueue
+nodev bdev         nodev ramfs       nodev pstore
+nodev proc         nodev hugetlbfs         fuseblk
+nodev cgroup       nodev rpc_pipefs  nodev fuse
+nodev cgroup2      nodev devpts      nodev fusectl
+nodev cpuset             squashfs          ext3
+nodev devtmpfs           vfat              ext2
+nodev configfs           msdos             ext4
+nodev debugfs            exfat             ntfs3
+nodev tracefs      nodev nfs         nodev overlay
+nodev securityfs   nodev nfs4
+nodev sockfs       nodev nfsd
+#+end_src
+The ones with ~nodev~ are special filesystems which do not reside on storage. Additional filesystems may have their code loaded as a module only when the system tries to access a partition that uses them.
+** Filesystem Varieties
+Linux supports many filesystem varieties, most with full read and write access, including:
+
++ ext4: Linux native filesystem (and earlier ~ext2~ and ~ext3~)
++ XFS: A high-performance filesystem originally created by SGI
++ JFS: A high-performance filesystem originally created by IBM
++ Windows-natives: ~FAT12~, ~FAT16~, ~FAT32~, ~VFAT~, ~NTFS~
++ Pseudo-filesystems resident only in memory, including ~proc~, ~sysfs~, ~devfs~, ~debugfs~
++ Network filesystems such as ~NFS~, ~coda~, ~afs~
++ Etc.
+
+Linux supports many types of filesystems, and more are constantly being added. These may be:
+
++ Native filesystems designed directly for Linux, such as ~ext4~
++ Filesystems brought over from other operating systems, such as ~xfs~ and ~ntfs~
++ Special filesystems which are not real filesystems, but use the infrastructure to accomplish particular purposes, such as ~debugfs~
+
+Linux is structured in a very modular fashion which renders this flexibility which is put to good use.
+** Journaling Filesystems
+Journaling filesystems recover from system crashes or ungraceful shutdowns with little or no corruption, and do so very rapidly. While this comes at the price of having some more operations to do, additional enhancements can more than offset the price.
+In a journaling filesystem, operations are grouped into transactions.
+A transaction must be completed without error, atomically; otherwise, the filesystem is not changed. A log file is maintained of transactions.
+When an error occurs, usually only the last transaction needs to be examined.
+
++ ext3
+  ext3 was an extension of the earlier non-journalling ext2 filesystem.
++ ext4
+  ext4 is a vastly enhanced outgrowth of ext3. Features include extents, 48-bit block numbers, and up to 16 TB size. Most Linux distributions have used ext4 as the default filesystem for quite a few years.
++ reiserfs
+  reiserfs was the first journalling implementation used in Linux, but lost its leadership and further development was abandoned.
++ JFS
+  JFS was originally a product of IBM and was ported from IBM’s AIX operating system.
++ XFS
+  XFS was originally a product of SGI and was ported from SGI’s IRIX operating systems. RHEL 7 adopted XFS as its default filesystem.
++ btrfs
+  btrfs is the newest of the journalling filesystems and is still under rapid development. It is the default for SUSE and openSUSE systems.
+** Special Filesystems
+Linux widely employs the use of special filesystems for certain tasks. These are particularly useful for accessing various kernel data structures and tuning kernel behavior, or for implementing particular functions.
+
+Note that some of these special filesystems have mount points, such as proc at /proc or sys at /sys and others do not. Examples of special filesystems that have no mount point include sockfs or pipefs; this means user applications don't interact with them, but the kernel uses them, taking advantage of VFS layers and code. These special filesystems are really not true filesystems; they are kernel facilities or subsystems that find the filesystem structural abstraction to be a useful way to recognize data and functionality.
+
+| Filesystem  | Mount Point       | Purpose                                                          |
+| rootfs      | None              | During kernel load, provides an empty root directory             |
+| hugetlbfs   | Anywhere          | Provides extended page access (2 or 4 MB on X86)                 |
+| bdev        | None              | Used for block devices                                           |
+| proc        | /proc             | Pseudofilesystem access to many kernel structures and subsystems |
+| sockfs      | None              | Used by BSD Sockets                                              |
+| tmpfs       | Anywhere          | RAM disk with swapping, re-sizing                                |
+| shm         | None              | Used by System V IPC Shared Memory                               |
+| pipefs      | None              | Used for pipes                                                   |
+| binfmt_misc | Anywhere          | Used by various executable formats                               |
+| devpts      | /dev/pts          | Used by Unix98 pseudo-terminals                                  |
+| usbfs       | /proc/bus/usb     | Used by USB sub-system for dynamical devices                     |
+| sysfs       | /sys              | Used as a device tree                                            |
+| debugfs     | /sys/kernel/debug | Used for simple debugging file access                            |
 
 * Disk Partitioning
-** Overview
-** Disk Partitioning
+** Common Disk Types
+There are a number of different hard disk types, each of which is characterized by the type of data bus they are attached to, and other factors such as speed, capacity, how well multiple drives work simultaneously, etc.
 
++ SATA (Serial Advanced Technology Attachment)
+  SATA disks were designed to replace the old IDE drives. They offer a smaller cable size (7 pins), native hot swapping, and faster and more efficient data transfer. They are seen as SCSI devices.
++ SCSI (Small Computer Systems Interface)
+  SCSI disks range from narrow (8 bit bus) to wide (16 bit bus), with a transfer rate from about 5 MB per second (narrow, standard SCSI) to about 160 MB per second (Ultra-Wide SCSI-3). SCSI has numerous versions such as Fast, Wide, and Ultra, Ultrawide.
++ SAS (Serial Attached SCSI)
+  SAS uses a newer point-to-point serial protocol, has a better performance than SATA disks and is better suited for servers. See the "[[https:hp.com/us-en/shop/tech-takes/sas-vs-sata][SAS vs SATA: What's the Difference]]" article by Zach Cabading to learn more.
++ USB (Universal Serial Bus)
+  These include flash drives and floppies. And are seen as SCSI devices.
++ SSD (Solid State Drives)
+  Modern SSD drives have come down in price, have no moving parts, use less power than drives with rotational media, and have faster transfer speeds. Internal SSDs are even installed with the same form factor and in the same enclosures as conventional drives.
+  SSDs still cost a bit more, but price is decreasing. It is common to have both SSDs and rotational drives in the same machines, with frequently accessed and performance critical data transfers taking place on the SSDs.
++ IDE and EIDE (Integrated Drive Electronics, Enhanced IDE)
+  These are obsolete.
+** Disk Geometry
+Rotational disks are composed of one or more platters and each platter is read by one or more heads. Heads read a circular track off a platter as the disk spins. Circular tracks are divided into data blocks called sectors.
+Historically, disks were manufactured with sectors of 512 bytes; 4 KB is now most common by far; larger sector sizes can lead to faster transfer speeds. Linux still uses a logical sector size of 512 bytes for backward compatibility, but this is simply for pretend in software. A cylinder is a group which consists of the same track on all platters.
+
+The physical structural image has become less and less relevant as internal electronics on the drive actually obscure much of it. Furthermore, SSDs have no moving parts or anything like the above ingredients, and for SSDs these geometry concepts make no sense.
+
+#+begin_src bash
+$ sudo fdisk -l /dev/sdc |grep -i sector
+
+Disk /dev/sdc: 1.8 TiB, 2000398934016 bytes, 3907029168 sectors
+Units: sectors of 1 * 512 = 512 bytes
+Sector size (logical/physical): 512 bytes / 4096 bytes
+#+end_src
+** Partition Organization
+Disks are divided into partitions. A partition is a physically contiguous region on the disk. On the most common architectures, there are two partitioning schemes in use:
+
++ MBR (Master Boot Record)
++ GPT (GUID Partition Table)
+
+MBR dates back to the early days of MSDOS. When using MBR, a disk may have up to four primary partitions. One of the primary partitions can be designated as an extended partition, which can be subdivided further into logical partitions with 15 partitions possible.
+
+When using the MBR scheme, if we have a SCSI, for example, =/dev/sda=, then =/dev/sda1= is the first primary partition and =/dev/sda2= is the second primary partition. If we created an extended partition =/dev/sda3=, it could be divided into logical partitions.
+All partitions greater than four are logical partitions (meaning contained within an extended partition). There can only be one extended partition, but it can be divided into numerous logical partitions.
+
+Linux doesn't require partitions to begin or end on cylinder boundaries, but other operating systems might complain if they don't. For this reason, the widely deployed Linux paritioning utilities try to play nice and end on boundaries. Obviously, partitions should not overlap either.
+
+GPT is on all modern systems and is based on UEFI (Unified Extensible Firmware Interface). By default, it may have up to 128 primary partitions. When using the GPT scheme, there is no need for extended partitions. Partitions can be up to 233 TB in size (with MBR, the limit is just 2TB).
+** Why Partition?
+
+There are multiple reasons as to why it makes sense to divide your system data into multiple partitions, including:
+
++ Separation of user and application data from operating system files
++ Sharing between operating systems and/or machines
++ Security enhancement by imposing different quotas and permissions for different system parts
++ Size concerns; keeping variable and volatile storage isolated from stable
++ Performance enhancement of putting most frequently used data on faster storage media
++ Swap space can be isolated from data and also used for hibernation storage.
+
+Deciding what to partition and how to separate your partitions is cause for thought. The reasons to have distinct partitions include increased granularity of security, quota, settings or size restrictions. You could have distinct partitions to allow for data protection.
+
+A common partition layout contains a =/boot= partition, a partition for the root filesystem =/=, a swap partition, and a partition for the =/home= directory tree.
+
+Keep in mind that it is more difficult to resize a partition after the fact than during install/creation time. Plan accordingly.
+** MBR Partition Table
+The disk partition table is contained within the disk's Master Boot Record (MBR), and is the 64 bytes following the 446 byte boot record. One partition on a disk may be marked active. When the system boots, that partition is where the MBR looks for items to load.
+
+Remember that there can be only one extended partition, but that partition may contain a number of logical partitions.
+
+The structure of the MBR is defined by an operating system-independent convention. The first 446 bytes are reserved for the program code. They typically hold part of a boot loader program. The next 64 bytes provide space for a partition table of up to four entries. The operating system needs this table for handling the hard disk.
+
+On Linux systems, the beginning and ending address in CHS is ignored.
+Note for the curious, there are 2 more bytes at the end of the MBR known as the magic number, signature word, or end of sector marker, which always have the value 0x55AA.
+
+The MBR contains a partition table with four primary partitions and a larger number of extended partitions, as well as some basic code needed to boot the system.
+
+Representation of a disk partition table - boot code 446 bytes, partition 1 - 16 bytes, partition 2 - 16 bytes, partition 3 - 16 bytes, partition 4 - 17 bytes, 0x55AA.
+[[file:images/Representationofadiskpartitiontable.png]]
+
+Each entry in the partition table is 16 bytes long, and describes one of the four possible primary partitions. The information for each is:
++ Active bit
++ Beginning address in cylinder/head/sectors (CHS) format
++ Partition type code, indicating: xfs, LVM, ntfs, ext4, swap, etc.
++ Ending address in CHS
++ Start sector, counting linearly from 0
++ Number of sectors in partition.
+
+Linux only uses the last two fields for addressing, using the linear block addressing (LBA) method.
+** GPT Partition Table
+Modern hardware comes with GPT support; MBR support will gradually fade away.
+The Protective MBR is for backwards compatibility, so UEFI systems can be booted the old way.
+
+There are two copies of the GPT header, at the beginning and at the end of the disk, describing metadata:
++ List of usable blocks on disk
++ Number of partitions
++ Size of partition entries. Each partition entry has a minimum size of 128 bytes.
+
+GPT layout. For modern systems using GPT, the partition table exists both at the front and back of the disk.
+The blkid utility (to be discussed later) shows information about partitions.
+
+On a modern UEFI/GPT system run the following command:
+#+begin_src bash
+$ sudo blkid /dev/sda8
+
+/dev/sda8: LABEL="RHEL8" UUID="53ea9807-fd58-4433-9460-d03ec36f73a3" BLOCK_SIZE="4096" TYPE="ext4"
+↪ PARTUUID="0c79e35b-e58b-4ce3-bd34-45651b01cf43"
+#+end_src
+On a legacy MBR system use this command:
+#+begin_src bash
+$ sudo blkid /dev/sdb2
+
+/dev/sdb2: LABEL="RHEL8" UUID="6921b738-1e36-429a-89be-8b97cf2f0556" BLOCK_SIZE="4096" TYPE="ext4"
+↪ PARTUUID="00022650-02"
+#+end_src
+Note both examples give a unique UUID, which describes the filesystem on the partition, not the partition itself. It changes if the filesystem is reformatted.
+[[file:images/GPTLayout.png]]
+The GPT partition also gives a PARTUUID which describes the partition and stays the same even if the filesystem is reformatted. If the hardware supports it, it is possible to migrate an MBR system to GPT, but it is not hard to brick the machine while doing so. Thus, usually the benefits are not worth the risk.
+** Naming Disk Devices and Device Nodes
+The Linux kernel interacts at a low level with disks through device nodes normally found in the /dev directory. Normally, device nodes are accessed only through the infrastructure of the kernel's Virtual File System; raw access through the device nodes is an extremely efficient way to destroy a filesystem.
+
+For an example of proper raw access, you can format a partition, as in this command:
+#+begin_src bash
+$ sudo mkfs.ext4 /dev/sda9
+#+end_src
+Device nodes for /SCSI/ and /SATA/ disks follow a simple xxy[z] naming convention, where xx is the device type (usually sd), y is the letter for the drive number (a, b, c, etc.), and z is the partition number:
++ The first hard disk is =/dev/sda=
++ The second hard disk is =/dev/sdb=
++ Etc.
+
+Partitions are also easily enumerated, as in:
++ =/dev/sdb1= is the first partition on the second disk
++ =/dev/sdc4= is the fourth partition on the third disk.
+
+In the above, sd means SCSI or SATA disk. Back in the days where IDE disks could be found, they would have been =/dev/hda3=, =/dev/hdb=, etc.
+
+Doing ~ls -l /dev~ will show you the current available disk device nodes.
+** blkid
+
+blkid is a utility to locate block devices and report on their attributes. It works with the libblkid library. It can take as an argument a particular device or list of devices. The screenshot below shows a use of blkid with arguments.
+
+It can determine the type of content (e.g. filesystem, swap) a block device holds, and also attributes (tokens, /NAME=value/ pairs) from the content metadata (e.g., /LABEL/ or /UUID/ fields).
+
+blkid will only work on devices which contain data that is finger-printable: e.g., an empty partition will not generate a block-identifying UUID. blkid has two main forms of operation: either searching for a device with a specific /NAME=value/ pair, or displaying /NAME=value/ pairs for one or more devices. Without arguments, it will report on all devices. There are quite a few options designating how to specify devices and what attributes to report on. Other sample commands:
+#+begin_src bash
+$ sudo blkid
+$ sudo blkid /dev/sda*
+$ sudo blkid -L root
+#+end_src
+** lsblk
+A related utility is ~lsblk~ which presents block device information in a tree format.
+** Sizing Up Partitions
+
+Most Linux systems should use a minimum of two partitions.
++ root (/) is used for the filesystem. Most installations will have more than one filesystem on more than one partition, which are joined together at mount points.
+  It is difficult with most filesystem types to resize the root partition, but using LVM (discussed later) can make this easier. While it is certainly possible to run Linux with just the root partition, most systems use more partitions to allow for easier backups, more efficient use of disk drives, and better security.
++ Swap is used as an extension of physical memory. The usual recommendation is swap size should be equal to physical memory in size; sometimes twice that is recommended.
+  However, the correct choice depends on the related issues of system use scenarios as well as hardware capabilities. Adding more and more swap will not necessarily help because at a certain point it becomes useless. One will need to either add more memory or re-evaluate the system setup.
+
+On older rotational hard drive media, it may make more sense to have a separate swap partition, but on SSD-type media, this is unimportant.
+However, one still may want to put swap on slower and probably cheaper hardware. This is true whether you use a partition or a file, which is becoming a more prevalent choice.
+
+Some distributions, including Ubuntu, default to use of a swap file rather than a partition:
++ It is more flexible (resizing is easier, for example)
++ It can be more dangerous, however, if error or bug spreads corruption
+
+Note that some distributions are now using (optionally) [[https:kernel.org/doc/html/latest/admin-guide/blockdev/zram.html][zram]], which instead of using disk storage for swap, uses compressed memory. This can easily lead to out of memory conditions, but in expert hands, it can improve performance.
+** Backing Up and Restoring Partition Tables
+Always assume changing the disk partition table might eliminate all data in all filesystems (it should not, but be cautious!). Thus, it is always prudent to make a backup of all data (that is not already backed up) before doing any of this type of work.
+
+For /MBR/ systems, dd can be used for converting and copying files. However, be careful using dd: a simple typing error or misused option could destroy your entire disk.
+
+The following command will back up the /MBR/ (along with the partition table):
+#+begin_src bash
+$ dd if=/dev/sda of=mbrbackup bs=512 count=1
+#+end_src
+The MBR can be restored using the following command:
+#+begin_src bash
+$ sudo dd if=mbrbackup of=/dev/sda bs=512 count=1
+#+end_src
+The above dd commands only copy the primary partition table; they do not deal with any partition tables stored in the other partitions (for extended partitions, etc.).
+
+For GPT systems it is best to use the sgdisk tool, as in this command:
+#+begin_src bash
+x8:/tmp>sudo sgdisk -p /dev/sda
+
+Disk /dev/sda: 1000215216 sectors, 476.9 GiB
+Model: SAMSUNG MZNLN512
+Sector size (logical/physical): 512/512 bytes
+Disk identifier (GUID): DBDBE747-8392-4B62-97AA-6214490073DC
+Partition table holds up to 128 entries
+....
+Number Start (sector) End (sector) Size      Code  Name
+   1           2048        534527 260.0 MiB  EF00  EFI System Partition
+   2         534528        567295 16.0 MiB   0C01  Microsoft reserved ...
+....
+#+end_src
+Note if run on a pure MBR system, the output is different:
+
+#+begin_src bash
+c8:/tmp>sudo sgdisk -p /dev/sda
+
+,***************************************************************
+Found invalid GPT and valid MBR; converting MBR to GPT format
+in memory.
+,***************************************************************
+Disk /dev/sda: 500118192 sectors, 238.5 GiB
+Model: Crucial_CT256MX1
+Sector size (logical/physical): 512/4096 bytes
+#+end_src
+** Partition Table Editors
+There are a number of utilities which can be used to manage partition tables.
+
+~fdisk~ is a menu-driven partition table editor. It is the most standard and one of the most flexible of the partition table editors. As with any partition table editor, make sure that you either write down the current partition table settings or make a copy of the current settings before making changes.
+
+The ~sfdisk~ command is a non-interactive Linux-based partition editor program, making it useful for scripting. Use the ~sfdisk~ tool with care.
+
+For /GPT/ systems, ~gdisk~ and ~sgdisk~ play a similar role. Both also work on MBR systems.
+
+~parted~ is the GNU partition manipulation program. It can create, remove, resize, and move partitions (including certain filesystems). The GUI interface to the parted command is ~gparted~.
+
+Many Linux distributions have a live/installation version which can be run off either a CDROM or USB stick, which include a copy of ~gparted~, so they can easily be used as a graphical partitioning tool on disks which are not actually being used while the partitioning program is run.
+** Using fdisk
+~fdisk~ is part of the base Linux installation, so it is a good idea to learn how to use it.
+You must be root to run ~fdisk~. It can be somewhat complex to handle, and caution is advised.
+The ~fdisk~ interface is simple and text-menu driven. After starting on a particular disk, as in this command:
+#+begin_src bash
+$ sudo fdisk /dev/sdb
+#+end_src
+you can issue the one-letter commands itemized below:
+
+- m: Display the menu
+- p: List the partition table
+- n: Create a new partition
+- d: Delete a partition
+- t: Change a partition type
+- w: Write the new partition table information and exit
+- q: Quit without making changes
+
+Fortunately, no actual changes are made until you write the partition table to the disk by entering ~w~.
+It is therefore important to verify your partition table is correct (with ~p~) before writing to disk with ~w~. If something is wrong, you can jump out safely with ~q~.
+
+The system will not use the new partition table until you reboot. However, you can use the following command:
+#+begin_src bash
+$ sudo partprobe -s
+#+end_src
+to try and read in the revised partition table. However, this doesn't always work reliably and it is best to reboot before doing things like formatting new partitions, etc., as mixing up partitions can be catastrophic.
+
+At any time you can run the following command:
+#+begin_src bash
+$ cat /proc/partitions
+#+end_src
+to examine what partitions the operating system is currently aware of.
+
+You can display the partition table and take no action with the following command:
+#+begin_src bash
+$ sudo fdisk -l /dev/sda
+#+end_src
 * Filesystem Features: Attributes, Creating, Checking, Usage, Mounting
-** Overview
-** Filesystem Features: Attributes, Creating, Checking, Usage, Mounting
+** lsattr and chattr
+Extended Attributes associate metadata not interpreted directly by the filesystem with files.
+Four namespaces exist: user, trusted, security, and system.
+The /system/ namespace is used for Access Control Lists (ACLs), and the /security/ namespace is used by SELinux.
+
+Flag values are stored in the file inode and may be modified and set only by the root user. They are viewed with ~lsattr~ and set with ~chattr~.
+Flags may be set for files:
+
++ i: Immutable
+  A file with the immutable attribute cannot be modified (not even by root). It cannot be deleted or renamed. No hard link can be created to it, and no data can be written to the file. Only the superuser can set or clear this attribute.
++ a: Append-only
+  A file with the append-only attribute set can only be opened in append mode for writing. Only the superuser can set or clear this attribute.
++ d: No-dump
+  A file with the no-dump attribute set is ignored when the dump program is run. This is useful for swap and cache files that you don't want to waste time backing up.
++ A: No atime update
+  A file with the no-atime-update attribute set will not modify its atime (access time) record when the file is accessed but not otherwise modified. This can increase the performance on some systems because it reduces the amount of disk I/O.
+
+Note that there are other flags that can be set; typing ~man chattr~ will show the whole list. The format for ~chattr~ is presented in the command below:
+#+begin_src bash
+$ chattr [+|-|=mode] filename
+#+end_src
+~lsattr~ is used to display attributes for a file. See the following command:
+#+begin_src bash
+$ lsattr filename
+#+end_src
+** mkfs
+Every filesystem type has a utility for formatting (making) a filesystem on a partition. The generic name for these utilities is ~mkfs~.
+However, this is just a frontend for filesystem-specific programs, each of which may have particular options.
+
+The general format for the mkfs command is:
+#+begin_src bash
+mkfs [-t fstype] [options] [device-file]
+#+end_src
+where ~[device-file]~ is usually a device name like =/dev/sda3= or =/dev/vg/lvm1=.
+
+The following two commands are entirely equivalent:
+#+begin_src bash
+$ sudo mkfs -t ext4 /dev/sda10
+
+$ sudo mkfs.ext4 /dev/sda10
+#+end_src
+Each filesystem type has its own particular formatting options and its own ~mkfs~ program.
+
+You should look at the man page for each of the ~mkfs.*~ programs to see details.
+** Checking File Integrity
+There are a number of ways to check for corrupt configuration files and binaries. One way, in redhat systems, is to use the command ~rpm -V~ to check a particular package. You can also use ~rpm -Va~ to check the integrity of all packages.
+#+begin_src bash
+$ rpm -V some_package
+$ rpm -Va
+#+end_src
+Using ~aide~ is another way to check for changes in files. The command ~aide --check~ will run a scan on your files and compare them to the last scan.
+#+begin_src bash
+$ aide --check
+#+end_src
+In Debian, the only way to do integrity checking is with ~debsums~. Running ~debsums somepackage~ will check the checksums on the files in that package.
+However, not all packages maintain checksums, so this might be less than useful.
+#+begin_src bash
+$ debsums options some_package
+#+end_src
+** Filesystem Corruption and Recovery
+~fsck~ may be used to attempt repair. However, before doing that, one should check that =/etc/fstab= has not been misconfigured or corrupted.
+Note once again you could have a problem with a filesystem type the kernel you are running does not understand.
+
+If the root filesystem has been mounted, you can examine this file, but =/= may have been mounted as read-only.
+Thus, to edit the file and fix it, you can run the following command:
+#+begin_src bash
+$ sudo mount -o remount,rw /
+#+end_src
+to remount it with write permission.
+
+If =/etc/fstab= seems to be correct, you can move to ~fsck~. But first you should try:
+#+begin_src bash
+$ sudo mount -a
+#+end_src
+to try and mount all filesystems.
+If this does not succeed completely, you can try to manually mount the ones with problems. You should first run ~fsck~ to just examine; afterwards you can run it again to have it try and fix any errors found.
+** fsck
+Every filesystem type has a utility designed to check for errors (and hopefully fix any that are found).
+The generic name for these utilities is ~fsck~. However, this is just a frontend for filesystem-specific programs.
+
+The general format for the fsck command is:
+#+begin_src bash
+fsck [-t fstype] [options] [device-file]
+#+end_src
+where /[device-file]/ is usually a device name like =/dev/sda3= or =/dev/vg/lvm1=.
+Usually, you do not need to specify the filesystem type, as ~fsck~ can figure it out by examining the superblocks at the start of the partition.
+
+You can control whether any errors found should be fixed one by one manually with the ~-r~ option, or automatically, as best possible, by using the ~-a~ option, etc.
+In addition, each filesystem type may have its own particular options that can be set when checking.
+
+The following two commands are entirely equivalent:
+#+begin_src bash
+$ sudo fsck -t ext4 /dev/sda10
+$ sudo fsck.ext4 /dev/sda10
+#+end_src
+
+If the filesystem is of a type understood by the operating system, you can almost always just run the following command:
+#+begin_src bash
+$ sudo fsck /dev/sda10
+#+end_src
+and the system will figure out the type by examining the first few bytes on the partition.
+
+~fsck~ is run automatically after a set number of mounts or a set interval since the last time it was run or after an abnormal shutdown.
+It should only be run when not unmounted cleanly previously, and should not be run on mounted filesystems.
+You can force a check of all mounted filesystems at boot by running these commands:
+#+begin_src bash
+$ sudo touch /forcefsck
+$ sudo reboot
+#+end_src
+The file =/forcefsck= will disappear after the successful check. One reason this is a valuable trick is it can do a ~fsck~ on the root filesystem, which is hard to do on a running system.
+
+You should look at the man page for each of the fsck.* programs to see details.
+** df: Filesystem Usage
+~df~ (disk free) is used to look at filesystem usage. Below we list a few operations and the ~df~ commands associated with them.
++ To display filesystem usage (in K bytes-default):
+#+begin_src bash
+$ df
+#+end_src
++ To display filesystem usage in human-readable format:
+#+begin_src bash
+$ df
+#+end_src
++ To display filesystem type format:
+#+begin_src bash
+$ df -T
+#+end_src
++ To show inode information:
+#+begin_src bash
+$ df -i
+#+end_src
+** du: Disk Usage
+~du~ (disk usage) is used to look at both disk capacity and usage. Below we list a few operations and the ~du~ commands associated with them.
++ To display disk usage for the current directory:
+#+begin_src bash
+$ du
+#+end_src
++ To list all files, not just directories:
+#+begin_src bash
+$ du -a
+#+end_src
++ To list in human-readable format:
+#+begin_src bash
+$ du -h
+#+end_src
++ To display disk usage for a specific directory:
+#+begin_src bash
+$ du -h somedir
+#+end_src
++ Try the following command:
+#+begin_src bash
+$ find . -maxdepth 1 -type d -exec du -shx {} \; | sort -hr
+#+end_src
+** Mounting Filesystems
+All accessible files in Linux are organized into one large hierarchical tree structure with the head of the tree being the root directory (=/=).
+However, it is common to have more than one partition (each of which can have its own filesystem type) joined together in the same filesystem tree. These partitions can also be on different physical devices, even on a network.
+
+The mount program allows attaching at any point in the tree structure; umount allows detaching them.
+
+The mount point is the directory where the filesystem is attached. It must exist before mount can use it; ~mkdir~ can be used to create an empty directory.
+If a pre-existing directory is used and it contains files prior to being used as a mount point, _they will be hidden_ after mounting.
+These files are not deleted and will again be visible when the filesystem is unmounted.
+
+By default, only the superuser can mount and unmount filesystems.
+
+Each filesystem is mounted under a specific directory, as in the following command:
+#+begin_src bash
+$ mount -t ext /dev/sdb4 /home
+#+end_src
++ Mounts an ext4 filesystem
++ Usually not necessary to specify the type with the -t option
++ The filesystem is located on a specific partition of a hard drive (/dev/sdb4)
++ The filesystem is mounted at the position /home in the current directory tree
++ Any files residing in the original /home directory are hidden until the partition is unmounted
+** mount
+The general form for the mount command is:
+#+begin_src bash
+mount [options] <source> <directory>
+#+end_src
+Note that in this example the filesystem is mounted by using the device node it resides on. However, it is also possible to mount using a label or a UUID. Thus, the following commands are all equivalent:
+#+begin_src bash
+$ sudo mount  /dev/sda2 /home
+$ sudo mount LABEL=home /home
+$ sudo mount    -L home /home
+$ sudo mount UUID=26d58ee2-9d20-4dc7-b6ab-aa87c3cfb69a /home
+$ sudo mount   -U 26d58ee2-9d20-4dc7-b6ab-aa87c3cfb69a /home
+#+end_src
+/Labels/ are assigned by filesystem type specific utilities, such as ~e2label~, and /UUIDs/ are assigned when partitions are created as containers for the filesystem, and formatted with ~mkfs~.
+
+While any of these three methods for specifying the device can be used, modern systems deprecate using the device node form because the names can change according to how the system is booted, which hard drives are found first, etc.
+Labels are an improvement, but, on rare occasions, you could have two partitions that wind up with the same label.
+UUIDs, however, should always be unique, and are created when partitions are created.
+
+~mount~ takes many options, some generic like ~-a~ (mount all filesystems mentioned in the =/etc/fstab= directory) and many filesystem specific; it has a very long man page. A common example would be the following command:
+#+begin_src bash
+$ sudo mount -o remount,ro /myfs
+#+end_src
+which remounts a filesystem with a read-only attribute.
+** Currently Mounted Filesystems
+The list of currently mounted filesystems can be seen by typing:
+#+begin_src bash
+mount
+#+end_src
+
+We can then see three basic types of filesystems:
++ kernelspace - backed by a block device (ext4)
++ userspace - backed by a block device (vmware-vmblock - a FUSE filesystem used to share VMWare volumes; ~gvfsd-fuse~ - a FUSE filesystem for handling mounts in GNOME)
++ pseudo - not backed by a block device (but also generally kernelspace) (~sysfs~, ~procfs~, ~devtmpfs~, and ~devtmpfs~ - providing core functionality; ~debugfs~, ~hugetlbfs~, ~cgroup~, and ~sunrpc~ - providing extra functionality, including network filesystem support)
+** umount
+Filesystems can be unmounted, as in the following command:
+#+begin_src bash
+$ umount [device-file | mount-point]
+#+end_src
+Below are some examples of how to unmount a filesystem:
+
++ Unmount the =/home= filesystem with this command:
+  #+begin_src bash
+  $ umount /home
+  #+end_src
++ Unmount the =/dev/sda3= device by running this command:
+  #+begin_src bash
+  $ umount /dev/sda3
+  #+end_src
+
+Note that the command to unmount a filesystem is ~umount~ (not unmount!).
+
+Like ~mount~, ~umount~ has many options, many of which are specific to filesystem type. Once again, the man pages are the best source for specific option information.
+The most common error encountered when unmounting a filesystem is trying to do this on a filesystem currently in use; i.e., there are current applications using files or other entries in the filesystem.
+
+This can be as simple as having a terminal window open in a directory on the mounted filesystem. Just using ~cd~ in that window, or killing it, will get rid of the device is busy error and allow unmounting.
+
+However, if there are other processes inducing this error, you must kill them before unmounting the filesystem. You can use ~fuser~ to find out which users are using the filesystem and kill them (be careful with this, you may also want to warn users first). You can also use ~lsof~ ("list open files") to try and see which files are being used and blocking unmounting.
+** Mounting at Boot and /etc/fstab
+During system initialization, the following command:
+#+begin_src bash
+$ mount -a
+#+end_src
+is executed in order to mount all filesystems listed in the =/etc/fstab= file.
+
+=/etc/fstab= is used to define mountable filesystems and devices on startup. Look there to see what filesystems can be mounted, where they may be found locally, who may mount them and with what permissions.
+If a file or directory is specified in =/etc/fstab=, it may be mounted at startup.
+
+This may include both local and remote network-mounted filesystems, such as /NFS/ and /samba/ filesystems.
+** /etc/fstab
+Each record in the =/etc/fstab= file contains information about a filesystem to be mounted at boot, their standard mount points and what options should be used when mounting them.
+Each record in the file contains white space separated fields of information about a filesystem to be mounted:
+
++ Device file name (such as =/dev/sda1=), /label/, or /UUID/
++ Mount point for the filesystem (where in the tree structure is it to be inserted)
++ Filesystem type
++ A comma-separated list of options
++ dump frequency used by the dump -w command, or a zero which is ignored by dump
++ fsck pass number or a zero - meaning do not fsck this partition
+
+The mount and umount utilities can use information in =/etc/fstab=.
+** Automatic Filesystem Mounting
+Linux systems have long had the ability to mount a filesystem only when it is needed. Historically, this was done using autofs.
+This utility requires installation of the autofs package using the appropriate package manager and configuration of files in =/etc=.
+
+While ~autofs~ is very flexible and well understood, systemd-based systems (including all enterprise Linux distributions) come with ~automount~ facilities built into the systemd framework.
+Configuring this is as simple as adding a line in =/etc/fstab= specifying the proper device, mount point and mounting options, such as:
+#+begin_src bash
+LABEL=Sam128 /SAM ext4 noauto,x-systemd.automount,x-systemd.device-timeout=10,x-systemd.idle-timeout=30 0 0
+#+end_src
+and then, either rebooting or issuing the command:
+#+begin_src bash
+$ sudo systemctl daemon-reload
+$ sudo systemctl restart local-fs.target
+#+end_src
+** automount Example
+The example provided below mounts a USB pen drive that is always plugged into the system, only when it is used. Options in =/etc/fstab=:
+[[file:images/automount.png]]
+
++ noauto
+  Do not mount at boot. Here, auto does not refer to automount.
++ x-systemd.automount
+  Use the systemd automount facility.
++ x-systemd.automount.device-timeout=10
+  If this device is not available, say it is a network device accessible through NFS, timeout after 10 seconds instead of getting hung.
++ x-systemd.automount.idle-timeout=30
+  If the device is not used for 30 seconds, unmount it.
+
+Note that the device may be mounted during boot, but then it should be unmounted after the timeout specified. The screenshot shows how the device is only available once it is used.
+
+** Introduction to Network Block Devices (NBD)
+A Network Block Device is a Linux protocol designed to export a block device from a source computer (server) to a target (client). The /NBD/ can use either Unix sockets or TCP/IP for communication.
+
+The unit that is exported by the server can be one or more files, image, or a block device. On the client side, the data blob presented by the server is mapped through an nbd kernel module and accessed as a block device. The client side block devices can be recognized by names like =/dev/nbd0=, =/dev/nbd1=, etc.
+
+In its simplest configuration the datastream is not encrypted. However, encryption is available and part of the /NBD/ specification.
+
+Some additional information and reference documents can be found at the following locations:
++ [[https:github.com/NetworkBlockDevice/nbd/blob/master/doc/proto.md][NBD protocol information]]
++ [[https:github.com/NetworkBlockDevice/nbd][Userland client and server application for NBD]]
+** Network Block Device
+To configure an nbd client/server pair, the general steps are:
++ Define something to export on the server
++ Define the item to be shared to the server
++ Connect the client
++ The device can be partitioned and formatted like any other block device by using the =/dev/nbd0=, =/dev/nbd1= devices
++ Almost any filesystem type can be used with the nbd devices once partitioned
+
+The steps we are going to use are:
+1. Use dd to create an empty file
+2. Define the item to be shared by the server in a configuration file
+3. Activate the nbd kernel module
+4. Query the server with the client using the export name, IP address and port
+5. Associate the local =/dev/nbd= block driver with the server with the nbd-client command
+6. Use fdisk to partition the nbd
+7. Add a filesystem to the nbd and mount it
+** NBD User Utilities
+There are several nbd clients and server packages available, including:
+
++ ~nbdkit~: CentOS, Fedora, Debian, Ubuntu
++ ~nbd-client~ and ~nbd-server~: Ubuntu, Debian
++ ~nbd~ (from GitHub): CentOS, Fedora, Debian, Ubuntu
++ ~xNBD-client~ and xNBD-server: Debian
++ ~qemu-img~: CentOS
+
+In general the clients and servers can be mixed and matched, so careful testing in your use case is recommended.
+
+An example of the user and administrator utilities for Ubuntu 22.04:
+
++ ~nbd-server-conf~ is an example of a configuration file for the server containing:
+  - IP address and port to listen for connections
+  - storage device to export as a disk
+  - some optional control elements
++ ~nbd-server~ is the server side component to answer connection requests and communication
+  - ~nbd-server man~ page contains the specifics for server configuration. This information may vary between distributions.
++ ~nbd-client~ is used to query the server and make the connection to the server
+  - ~nbd-client man~ page contains client-related information to make the connection to the server.
+
+These utilities may have different names and include different functions depending on how they are packaged by the distributions.
+** Network Block Device Example
+Some example commands for the clients and server are provided below.
+
+The server was CentOS-8-Stream using the nbd package from GitHub.
+The client was CentOS-8-Stream using the nbd package from GitHub.
+
++ Ensure the nbd kernel modules are loaded using the following command:
+#+begin_src bash
+$ sudo modprobe -i nbd
+#+end_src
++ Connect the exported foo on 192.168.242.160 to the local device =/dev/nbd10=:
+#+begin_src bash
+$ sudo nbd-client -N foo 192.168.242.160 /dev/nbd10
+#+end_src
+
+You can also see an example of some commands from an Ubuntu installation.
++ Start the nbd server process with the following command:
+#+begin_src bash
+$ sudo nbd-server -C nbd-server.conf
+#+end_Src
++ List the exports on the server from the client with the following command:
+#+begin_src bash
+$ sudo nbd-client -l 127.0.0.1 10042
+#+end_src
++ Connect the export foo to the local device =/dev/nbd0=:
+#+begin_src bash
+$ sudo nbd-client -N foo 127.0.0.1 10042 /dev/nbd0
+#+end_src
+[[file:images/nbd.png]]
 
 * The EXT4 Filesystem
-** Overview
-** The Ext4 Filesystem
+** ext4 Filesystem Features
+An extent (/ext/) is a group of contiguous blocks. The use of extents can improve large file performance and reduce fragmentation.
+
+The ext4 filesystem can support volumes up to 1 EB and file sizes up to 16 TB. Extents replace the older block mapping mechanism.
+
+ext4 is backwards compatible with ext3 and ext2. It can pre allocate disk space for a file. The allocated space is usually guaranteed and contiguous. It also uses a performance technique called allocate-on-flush (delays block allocation until it writes data to disk). ext4 breaks the 32,000 subdirectory limit of ext3.
+
+ext4 uses checksums for the journal which improves reliability. This can also safely avoid a disk I/O wait during journalling, which results in a slight performance boost.
+
+Another feature is the use of improved timestamps. ext4 provides timestamps measured in nanoseconds.
+** ext4 Superblock and Block Groups
+
+The superblock at the beginning contains information about the entire filesystem. It is followed by Block Groups composed of sets of contiguous blocks:
+
++ Include administrative information
++ High redundancy of information in block groups
++ Other blocks store file data
+
+The block size is specified when the filesystem is created. It may be 512, 1K, 2K, 4K, 8K, etc. bytes, but not larger than a page of memory (4kB on x86).
+
+An ext4 filesystem is split into a set of block groups. The block allocator tries to keep each file’s blocks within the same block group to reduce seek times. The default block size is 4 KB, which would create a block group of 128 MB.
+
+All fields in ext4 are written to disk in /little-endian/ order, except the journal.
+
+ext3/4 Filesystem Layout: Super block, group descriptors, data block bitmap, inode bitmap, inode table (in blocks), data blocks (in blocks)
+
+[[file:images/ext2filesystem.png]]
+
+The layout of a standard block group is simple.
+For block group 0, it is the only one where, the first 1024 bytes are unused (to allow for boot sectors, etc).
+The superblock will start at the first block, except for block group 0. This is followed by the group descriptors and a number of GDT (Group Descriptor Table) blocks. These are followed by the data block bitmap, the inode bitmap, the inode table, and the data blocks.
+** Block Groups
+Before the introduction of the sparse superblock, the first and second blocks was the same in every block group, and comprise the Superblock and the Group Descriptors.
+
+Under normal circumstances, only those in the first block group are used by the kernel; the duplicate copies are only referenced when the filesystem is being checked. If everything is OK, the kernel merely copies them over from the first block group.
+
+If there is a problem with the master copies, it goes to the next and so on until a healthy one is found and the filesystem structure is rebuilt. This redundancy makes it very difficult to thoroughly fry an ext2/3/4 filesystem, as long as the filesystem checks are run periodically.
+
+In the early incarnations of the ext filesystem family, each block group contained the group descriptors for every block group, as well as a copy of the superblock.
+As an optimization, however, today not all block groups have a copy of the superblock and group descriptors. With most starting with block bitmap.
+
+To see what you have, you could examine it as in the accompanying screenshot, (putting in an appropriate device node) to see precise locations.
+This happens when the filesystem is created with the ~sparse_super~ option, which is the default.
+[[file:images/dumpe2fs.png]]
+** A Closer Look at the Superblock
+Note that every time the disk is successfully mounted, the mount count is incremented. The filesystem is checked every maximum-mount-counts or every 180 days, whichever comes first.
+
+Block size can be set through the ~mkfs~ command.
+The superblock for the filesystem is stored in block 0 of the disk. This superblock contains information about the filesystem itself.
+
+The Superblock contains global information about the filesystem:
++ Mount count and maximum mount count
++ Block size for this filesystem
++ Blocks per group
++ Free block count
++ Free Inode count
++ OS ID
+
+The Superblock is redundantly stored in several block groups depending on the ~sparse_super~ value.
+** Block and Inode Information for ext4: dumpe2fs
+The block size is used to set the maximum number of:
++ Blocks
++ Inodes
++ Superblocks
+
+You can use the ~dumpe2fs~ program to get information about a particular partition. See ~dumpe2fs~ to scan the filesystem information such as limits, capabilities and flags, as well as other attributes.
+#+begin_src bash
+$ sudo dumpe2fs /dev/nvme0p08
+
+Filesystem volume name:   endeavouros
+Last mounted on:          /sysroot
+Filesystem UUID:          <redacted>
+Filesystem magic number:  0xEF53
+Filesystem revision #:    1 (dynamic)
+Filesystem features:      has_journal ext_attr resize_inode dir_index orphan_file filetype needs_recovery extent 64bit flex_bg metadata_csum_seed sparse_super large_file huge_file dir_nlink extra_isize metadata_csum orphan_present
+Filesystem flags:         signed_directory_hash
+Default mount options:    user_xattr acl
+Filesystem state:         clean
+Errors behavior:          Continue
+Filesystem OS type:       Linux
+Inode count:              29540352
+Block count:              118150912
+Reserved block count:     5854927
+Overhead clusters:        2135050
+Free blocks:              36849139
+Free inodes:              25150702
+First block:              0
+Block size:               4096
+Fragment size:            4096
+Group descriptor size:    64
+Reserved GDT blocks:      1021
+Blocks per group:         32768
+Fragments per group:      32768
+Inodes per group:         8192
+Inode blocks per group:   512
+Flex block group size:    16
+...
+
+#+end_src
+** Change Filesystem Parameters: tune2fs
+~tune2fs~ can be used to change filesystem parameters.
+
++ To change the maximum number of mounts between filesystem checks (max-mount-count) run this command:
+  #+begin_src bash
+  $ sudo tune2fs -c 25 /dev/sda1
+  #+end_src
++ To change the time interval between checks (interval-between-checks) type the following command:
+  #+begin_src bash
+  $ sudo tune2fs -i 10 /dev/sda1
+  #+end_src
++ To list the contents of the superblock, including the current values of parameters which can be changed use this command:
+  #+begin_src bash
+  $ sudo tune2fs -l /dev/sda1
+  #+end_src
+
+It basically shows the global information from ~dumpe2fs~ but without the block informations.
+** Defragmentation
+Defragmentation isnt as prevalant in Linux compared to Windows.
+This is primarily because they do not try to cram files onto the innermost disk regions where access times are faster. Instead, they spread free space out throughout the disk, so that when a file has to be created there is a much better chance that a region of free blocks big enough can be found to contain the entire file in either just one or a small number of pieces.
 
 * Logical Volume Management (LVM)
-** Overview
-** Logical Volume Management
+** Logical Volume Management (LVM)
+LVM (Logical Volume Management) breaks up one virtual partition into multiple chunks, each of which can be on different partitions and/or disks.
+There are many advantages to using LVM; in particular, it becomes really easy to change the size of the logical partitions and filesystems, to add more storage space, rearrange things, etc.
+
+One or more physical volumes (disk partitions) are grouped together into a volume group. Then, the volume group is subdivided into logical volumes, which mimic to the system nominal physical disk partitions and can be formatted to contain mountable filesystems.
+
+There are a variety of command line utilities tasked to create, delete, resize, etc. physical and logical volumes. For a graphical tool, most Linux distributions use ~system-config-lvm~.
+However, RHEL no longer supports this tool and there is currently no graphical tool that works reliably with the most recent variations in filesystem types etc. Fortunately, the command line utilities are not hard to use and are more flexible anyway.
+
+LVM does impact performance. There is a definite additional cost that comes from the overhead of the LVM layer. However, even on non-RAID systems, if you use /striping/ (splitting of data to more than one disk), you can achieve some parallelization improvements.
+
+Logical volumes have features similar to RAID devices. They can actually be built on top of a RAID device. This would give the logical volume the redundancy of a RAID device with the scalability of LVM.
+Difference being that LVM has better scalability than RAID: logical volumes can easily be resized; i.e., enlarged or shrunk, as needs require. If more space is needed, additional devices can be added to the logical volume at any time.
+** Volumes and Volume Groups
+Partitions are converted to physical volumes and multiple physical volumes are grouped into volume groups; there can be more than one volume group on the system.
+Space in the volume group is divided into extents; these are 4 MB in size by default, but the size can easily be changed when being allocated.
+
+Logical volumes are allocated from volume groups:
+
++ Can be defined by the size or number of extents
++ Filesystems are built on logical volumes
++ Can be named anything
+
+Systems using LVM consist of Physical Volumes made up of disk partitions, which are then grouped into Volume Groups containing Logical Volumes.
+
+[[file:images/LVM_Components.png]]
+
+There are a number of command line utilities used to create and manipulate volume groups, whose name always start with vg, including:
+
++ ~vgcreate~: Creates volume groups
++ ~vgextend~: Adds to volume groups
++ ~vgreduce~: Shrinks volume groups
+
+Utilities that manipulate what physical partitions enter or leave volume groups start with pv and include:
+
++ ~pvcreate~: Converts a partition to a physical volume
++ ~pvdisplay~: Shows the physical volumes being used
++ ~pvmove~: Moves the data from one physical volume within the volume group to others; this might be required if a disk or partition is being removed for some reason. It would then be followed by:
++ ~pvremove~: Remove a partition from a physical volume
+
+Typing ~man lvm~ will give a full list of LVM utilities.
+** Logical Volumes Utilities
+There are a number of utilities that manipulate logical volumes. Unsurprisingly, they all begin with lv. We will discuss the most commonly used ones, but a short list can be obtained using the following command:
+#+begin_src bash
+$ ls -lF /sbin/lv*
+#+end_src
+These utilities are in the =/sbin= directory, not in =/usr/sbin=, as they may be needed either for boot or repair and recovery.
+
+Most of them are symbolically linked to /lvm/, a Swiss army knife program that does all the work, but figures out what is being asked to do based on the name it is invoked with.
+This is also true for most of the pv* and vg* utilities, as you can verify easily enough.
+#+begin_src bash
+$ ls -lF /sbin/pv*
+#+end_src
+** Creating Logical Volumes
+~lvcreate~ allocates logical volumes from within volume groups. The size can be specified either in bytes or number of extents (remember, they are 4 MB by default). Names can be anything desired.
+~lvdisplay~ reports on available logical volumes.
+
+Filesystems are placed in logical volumes and are formatted with ~mkfs~, as usual.
+
+Starting with possibly creating a new volume group, the steps involved in setting up and using a new logical volume are:
+1. Create partitions on disk drives (type /8e/ in fdisk).
+2. Create physical volumes from the partitions.
+3. Create the volume group.
+4. Allocate logical volumes from the volume group.
+5. Format the logical volumes.
+6. Mount the logical volumes (also update the =/etc/fstab= file as needed).
+
+For example, assuming you have already created partitions =/dev/sdb1= and =/dev/sdc1= and given them type /8e/, the steps involved in setting up and using a new logical volume are:
+#+begin_src bash
+$ sudo pvcreate /dev/sdb1
+$ sudo pvcreate /dev/sdc1
+$ sudo vgcreate -s 16M vg /dev/sdb1
+$ sudo vgextend vg /dev/sdc1
+$ sudo lvcreate -L 50G -n mylvm vg
+$ sudo mkfs -t ext4 /dev/vg/mylvm
+$ sudo mkdir /mylvm
+$ sudo mount /dev/vg/mylvm /mylvm
+#+end_src
+
+Be sure to add the line:
+#+begin_src bash
+/dev/vg/mylvm /mylvm ext4 defaults 1 2
+#+end_src
+to =/etc/fstab= to make this a persistent mount.
+** Displaying Logical Volumes
+Resizing Logical Volumes
+
+One great advantage of using LVM is that it is easy and quick to change the size of a logical volume, especially when compared with trying to do this with a physical partition that already contains a filesystem. When doing this, extents can be added or subtracted from the logical volume, and they can come from anywhere in the volume group; they need not be from physically contiguous sections of the disk.
+
+If the volume contains a filesystem, expanding or shrinking it is an entirely different operation than changing the size of the volume. When expanding a logical volume with a filesystem, you must first expand the volume, and then expand the filesystem.​ When shrinking a logical volume with a filesystem, you must first shrink the filesystem, and then shrink the volume.
+
+This is best done with lvresize, as in the following command:
+
+$ sudo lvresize -r -L 20 G /dev/VG/mylvm
+
+where the -r option causes resizing of the filesystem at the same time as the volume size is changed.
+
+To grow a logical volume with an ext4 filesystem, run the following command:
+
+$ sudo lvresize -r -L +100M /dev/vg/mylvm
+
+where the plus sign (+) indicates adding space. Note that you need not unmount the filesystem to grow it.
+
+To shrink the filesystem, run the following command:
+
+$ sudo lvresize -r -L 200M /dev/vg/mylvm
+
+You can also reduce a volume group as in:
+
+$ sudo pvmove /dev/sdc1
+$ sudo vgreduce vg /dev/sdc1
+
+The filesystem cannot be mounted when being shrunk. However, some filesystems permit expansion while they are mounted.
+
+The utilities which change the filesystem size are filesystem-dependent; besides lvresize, we can also use lvextend, lvreduce with resize2fs.
+In order to display information about LVM, there are several command line programs available.
+
++ ~pvdisplay~ shows one or more physical volumes. If you leave off the physical volume name, it lists all physical volumes (see commands below):
+  #+begin_src bash
+  $ pvdisplay
+  $ pvdisplay /dev/sda5
+  #+end_src
++ vgdisplay shows one or more volume groups. If you leave off the volume group name, it lists all volume groups (see commands below):
+  #+begin_src bash
+  $ vgdisplay
+  $ vgdisplay /dev/vg0
+  #+end_src
++ ~lvdisplay~ shows one or more logical volumes. If you leave off the logical volume name, it lists all logical volumes (see commands below):
+  #+begin_src bash
+  $ lvdisplay
+  $ lvdisplay /dev/vg0/lvm1
+  #+end_src
+** Resizing Logical Volumes
+One great advantage of using LVM is that it is easy and quick to change the size of a logical volume, especially when compared with trying to do this with a physical partition that already contains a filesystem.
+When doing this, extents can be added or subtracted from the logical volume, and they can come from anywhere in the volume group; they need not be from physically contiguous sections of the disk.
+
+If the volume contains a filesystem, expanding or shrinking it is an entirely different operation than changing the size of the volume. When expanding a logical volume with a filesystem, you must first expand the volume, and then expand the filesystem.​ When shrinking a logical volume with a filesystem, you must first shrink the filesystem, and then shrink the volume.
+
+This is best done with ~lvresize~, as in the following command:
+#+begin_src bash
+$ sudo lvresize -r -L 20 G /dev/VG/mylvm
+#+end_src
+where the -r option causes resizing of the filesystem at the same time as the volume size is changed.
++ To grow a logical volume with an ext4 filesystem, run the following command:
+  #+begin_src bash
+  $ sudo lvresize -r -L +100M /dev/vg/mylvm
+  #+end_src
+  where the plus sign (+) indicates adding space. Note that you need not unmount the filesystem to grow it.
++ To shrink the filesystem, run the following command:
+  #+begin_src
+  $ sudo lvresize -r -L 200M /dev/vg/mylvm
+  #+end_src
++ You can also reduce a volume group as in:
+  #+begin_src bash
+  $ sudo pvmove /dev/sdc1
+  $ sudo vgreduce vg /dev/sdc1
+  #+end_src
+
+The filesystem cannot be mounted when being shrunk. However, some filesystems permit expansion while they are mounted.
+The utilities which change the filesystem size are filesystem-dependent; besides ~lvresize~, we can also use ~lvextend~, ~lvreduce~ with ~resize2fs~.
+** LVM Snapshots
+LVM snapshots create an exact copy of an existing logical volume. They are useful for backups, application testing, and deploying VMs (Virtual Machines). The original state of the snapshot is kept as the block map.
+
+Snapshots only use space for storing /deltas/:
++ When the original logical volume changes, original data blocks are copied to the snapshot
++ If data is added to snapshot, it is stored only there
+
++ To create a snapshot of an existing logical volume use this command:
+  #+begin_src bash
+  $ sudo lvcreate -l 128 -s -n mysnap /dev/vg/mylvm
+  #+end_src
++ To then make a mount point and mount the snapshot run the following command:
+  #+begin_src bash
+  $ mkdir /mysnap
+  $ mount -o ro /dev/vg/mysnap /mysnap
+  #+end_src
++ To remove the snapshot do:
+  #+begin_src bash
+  $ sudo umount /mysnap
+  $ sudo lvremove /dev/vg/mysnap
+  #+end_src
+Always be sure to remove the snapshot when you are through with it. If you do not remove the snapshot and it fills up because of changes, it will be automatically disabled. A snapshot with the size of the original will never overflow.
 
 * Kernel Services and Configuration
-** Overview
-** Kernel Services and Configuration
+** Kernel Overview
+Narrowly defined, Linux is only the kernel of the operating system, which includes many other components, such as libraries and applications that interact with the kernel.
+
+The kernel is the essential central component that connects the hardware to the software and manages system resources, such as memory and CPU time allocation among competing applications and services.
+It handles all connected devices using device drivers, and makes the devices available for operating system use.
+
+A system running only a kernel has rather limited functionality. It will be found only in dedicated and focused embedded devices.
+Kernel responsibilities include:
++ System initialization and boot up
++ Process scheduling
++ Memory management
++ Controlling access to hardware
++ I/O (Input/Output) between applications and storage devices
++ Implementation of local and network filesystems
++ Security control, both locally (such as filesystem permissions) and over the network
++ Networking control
+** Kernel Boot Parameters
+There is a rather long list of available kernel parameters. Detailed documentation can be found:
++ In the =kernel-parameters.txt= file in the kernel source
++ Online, using the [[https:kernel.org/doc/Documentation/][kernel's command line parameters documentation]]
++ On the system in the kernel documentation package provided by most distributions with a name like ~kernel-doc~ or ~linux-doc~
++ By typing ~man bootparam~
+
+Parameters can be specified either as a simple value given as an argument, or in the form of ~param=value~, where the given value can be a string, integer, array of integers, etc., as explained in the documentation file.
+#+begin_src bash
+vmlinuz root=/dev/sda6 rhgb quiet crashkernel=512M
+#+end_src
+Kernel options are placed at the end of the kernel line and are separated by spaces. An example of kernel boot parameters (all in one line):
+#+begin_src bash
+linux /boot/vmlinuz-5.19.0 root=/dev/sda5 ro crashkernel=512M quiet selinux=0
+#+end_src
+Below you can see an explanation of some of the boot parameters:
++ ~root~: root filesystem (can be in the for of root=UUID=... or root=/dev/sda5 or root=LABEL=CentOS9, etc.)
++ ~ro~: mounts root device read-only on boot
++ ~crashkernel=512M~: how much memory to set aside for kernel crashdumps through the kdump facility
++ ~quiet~: disables most log messages
++ ~selinux=0~: disables SELinux
+
+By convention, there should be no intentionally hidden or secret parameters. They should all be explained in the documentation, and patches to the kernel source with new parameters should always include patches to the documentation file.
+
+Note that Linux distributions often add parameters that are particular to that distribution, such as ~rhgb~ in the example above, which stands for Red Hat Graphical Boot.
+** Kernel Command Line
+Various parameters are passed to the system at boot on the kernel command line. Normally, these are placed on the linux or linux16 line in the GRUB configuration file.
+
+Sample kernel command lines will depend on Linux distribution and version and might look like:
+#+begin_src bash
+linux /boot/vmlinuz-4.15.0-58-generic \
+       root=UUID=5cec328b-bcd6-46d2-bcfa-8430257cd7a5 \
+       ro find_preseed=/preseed.cfg auto noprompt \
+       priority=critical locale=en_US quiet crashkernel=512M-:192M
+# OR
+BOOT_IMAGE=/boot/vmlinuz-4.15.0-58-generic \
+     root=UUID=5cec328b-bcd6-46d2-bcfa-8430257cd7a5\
+     ro find_preseed=/preseed.cfg auto noprompt \
+     priority=critical locale=en_US quiet crashkernel=512M-:192M
+# OR
+linux /boot/vmlinuz-5.19.0 root=UUID=7ef4e747-afae-48e3-90b4-9be8be8d0258 ro quiet
+# OR
+linuxefi /boot/vmlinuz-5.2.9 root=UUID=77461ee7-c34a-4c5f-b0bc-29f4feecc743 ro crashkernel=auto rhgb quiet crashkernel=384M-:128M
+#+end_src
+These would be found in the =grub.cfg= file in a subdirectory under =boot=, such as =/boot/grub=, or in a place like =/boot/efi/EFI/centos/grub.cfg=.
+
+Everything after the ~vmlinuz file~ specified is an option. Any options not understood by the kernel will be passed to ~init~ (pid = 1), the first user process to be run on the system.
+
+To see what command line a system was booted with, type the following command:
+#+begin_src bash
+$ cat /proc/cmdline
+BOOT_IMAGE=(hd0,msdos2)/boot/vmlinuz-5.19.0 root=UUID=7f7221b8-60d8-41b9-b643-dfcc80527c37 ro rhgb quiet crashkernel=512M
+#+end_src
+Fedora and RHEL/CentOS use the /BLSFG/ (Boot Loader Specification Configuration) which alters where the kernel command line is set. You should now look in either =/boot/grub2/grubenv= for that information, or the files in =/boot/loader/entries=.
+** Boot Process Failures
+If the system fails to boot properly or fully, being familiar with what happens at each stage is important.
+Assuming you get through the BIOS stage, you may reach a state of:
+
+1. No bootloader screen:
+   Check for GRUB misconfiguration or a corrupt boot sector. Bootloader re-install needed?
+
+2. Kernel fails to load:
+   If the kernel panics during the boot process, it is most likely a misconfigured or corrupt kernel, or incorrect kernel boot parameters in the GRUB configuration file. If the kernel has booted successfully in the past, either it has corrupted, or bad parameters were supplied. Depending on which, you can re-install the kernel, or enter into the interactive GRUB menu at boot and use very minimal command line parameters and try to fix that way. Or you can try booting into a rescue image.
+
+3. Kernel loads but fails to mount the root filesystem:
+   The main causes here are:
+   - Misconfigured GRUB configuration file
+   - Misconfigured /etc/fstab
+   - No support for the root filesystem type built into the kernel or in the initramfs image
+
+4. Failure during the init process.
+   There are many things that can go wrong once init starts; look closely at the messages that are displayed before things stop. If things were working before, with a different kernel, that is a big clue. Look out for corrupted filesystems, errors in startup scripts, etc.
+   Try booting into a lower runlevel, such as 3 (no graphics) or 1 (single user mode).
+** sysctl
+The ~sysctl~ interface can be used to read and tune kernel parameters at run time. The current values can be displayed by doing:
+#+begin_src bash
+$ sysctl -a
+#+end_src
+
+Each value corresponds to a particular pseudofile residing under =/proc/sys=, with directory slashes being replaced by dots. For example, the following two commands are equivalent:
+#+begin_src bash
+$ sudo sh -c 'echo 1 > /proc/sys/net/ipv4/ip_forward'
+$ sudo sysctl net.ipv4.ip_forward=1
+#+end_src
+where the second form is used to set a value with the ~sysctl~ command line interface. Do not leave spaces around the *=* sign in this command.
+Note that in the first form, we cannot just use a simple sudo with echo; the command must be done in the complicated way shown, or executed as root.
+
+If settings are placed in the =/etc/sysctl.conf= file (see ~man sysctl.conf~ for details), settings can be fixed at boot time.
+
+Note that typing this command:
+#+begin_src bash
+$ sudo sysctl -p
+#+end_src
+effectuates immediate digestion of the file, setting all parameters as found; this is also part of the boot process.
+
+With the advent of ~systemd~, things are a little more complicated. Vendors put their settings in files in the =/usr/lib/sysctl.d/= directory.
+These can be added to or supplanted by files placed in =/etc/sysctl.d=. However, the original file (=/etc/sysctl.conf=) is still supported, as is self-documented in that file.
 
 * Kernel Modules
-** Overview
 ** Kernel Modules
+The Linux kernel makes extensive use of modules, which contain important software that can be dynamically loaded and unloaded as needed after the system starts.
+Many modules incorporate device drivers to control hardware either inside the system or attached peripherally.
+Other modules can control network protocols, support different filesystem types and many other purposes.
 
+Kernel modules are located in =/lib/modules/$(uname -r)= and can be compiled for specific kernel versions.
+Parameters can be specified when loading modules to control their behavior. The end result is great flexibility and agility in responding to changing conditions and needs.
+
+Kernel remains a monolithic one, not a microkernel.
+** Listing Modules in Use with lsmod
+Most kernel features can be configured as modules, even if they are almost always likely to be used.
+This flexibility also aids in development of new features as system reboots are almost never needed to test during development and debugging.
+
+While other operating systems have used module-like methods, Linux uses it far more than any other operating system.
+While the module is loaded, you can always see its status with the ~lsmod~ command.
+** Module Utilities
+
+There are a number of utility programs that are used with kernel modules:
++ lsmod
+  List loaded modules.
+  Use the lsmod command to list the loaded modules:
+  #+begin_src bash
+  $ lsmod
+  #+end_src
++ insmod
+  Directly load modules.
+  Use the insmod command to directly load a module (requires fully qualified module name):
+  #+begin_src bash
+  $ insmod /lib/modules/$(uname -r)/kernel/drivers/net/ethernet/intel/e1000e.ko
+  #+end_src
++ rmmod
+  Directly remove modules.
+  Use the rmmod command to directly remove a module:
+  #+begin_src bash
+  $ rmmod e1000e
+  #+end_src
++ modprobe
+  Load or unload modules, using a pre-built module database with dependency and location information.
+  - Use the modprobe command to load a module:
+    ,#+begin_src bash
+    $ modprobe e1000e
+    #+end_src
+  - Use the ~modprobe -r~ command to unload or remove a module:
+    #+begin_src bash
+    $ modprobe -r e1000e
+    #+end_src
+  - ~modprobe~ requires a module dependency database be updated.
++ depmod
+  Rebuild the module dependency database.
+  Use the ~depmod~ command to generate or update the file =/lib/modules/$(uname -r)/modules.dep=.
++ modinfo
+  Display information about a module.
+  Use the modinfo command to display information about a module (including parameters):
+  #+begin_src bash
+  $ modinfo e1000e
+  #+end_src
+** Some Considerations with Modules
+Modules are usually loaded with ~modprobe~, not ~insmod~.
+Modules loaded with non-acceptable open source licenses mark the kernel as tainted.
+
+There are some important things to keep in mind when loading and unloading modules:
+
++ It is impossible to unload a module being used by one or more other modules, which one can ascertain from the ~lsmod~ listing.
++ It is impossible to unload a module that is being used by one or more processes, which can also be seen from the ~lsmod~ listing.
+  However, there are modules which do not keep track of this reference count, such as network device driver modules, as it would make it too difficult to temporarily replace a module without shutting down and restarting much of the whole network stack.
++ When a module is loaded with ~modprobe~, the system will automatically load any other modules that need to be loaded first.
++ When a module is unloaded with ~modprobe -r~, the system will automatically unload any other modules being used by the module, if they are not being simultaneously used by any other loaded modules.
+** modinfo Example
+~modinfo~ can be used to find out information about kernel modules (whether or not they are currently loaded).
+You can see an example by trying it, it displays information about version, file name, which hardware devices the device driver module can handle, and what parameters can be supplied on loading.
+
+Much information about modules can also be seen in the ~/sys~ pseudo-filesystem directory tree; in our example, you would look under ~/sys/module/sg~ and some, if not all parameters, can be read and/or written under ~/sys/module/sg/parameters~. We will show how to set them next.
+
+Many modules can be loaded while specifying parameter values, such as in this command:
+#+begin_src bash
+$ sudo /sbin/insmod <pathto>/e1000e.ko debug=2 copybreak=256
+#+end_src
+or, for a module already in the proper system location, it is easier achieved with the following command:
+#+begin_src bash
+$ sudo /sbin/modprobe e1000e debug=2 copybreak=256
+#+end_src
+** /etc/modprobe.d
+All files in the =/etc/modprobe.d= subdirectory tree which end with the ~.conf~ extension are scanned when modules are loaded and unloaded using ~modprobe~.
+Files in the =/etc/modprobe.d= directory control some parameters that come into play when loading with ~modprobe~.
+These parameters include module name aliases and automatically supplied options. You can also blacklist specific modules to avoid them being loaded.
+
+Settings apply to modules as they are loaded or unloaded, and configurations can be changed as needs change.
+
+The format of files in =/etc/modprobe.d= is simple: one command per line, with blank lines and lines starting with # ignored (useful for adding comments).
+A backslash at the end of a line causes it to continue on the next line, which makes the file a bit neater.
 * Devices and udev
-** Overview
-** Devices and udev
+** udev
+/udev/ stands for User Device management.
+It dynamically discovers built-in hardware as well as peripheral devices:
++ during system boot
++ when hotplugged at any time
 
+/udev/ handles loading and unloading device drivers with proper configurations, as needed. udev actions include:
++ Device naming
++ Device file and symlink creating (symlink in =/dev=)
++ Setting file attributes
++ Taking needed actions
+
+When devices are added or removed from the system, udev receives a message from the kernel.
+It then parses the rules files in the =/etc/udev/rules.d= directory to see if any rules are there for the device added or removed.
+
+These rules are totally customizable and can specify device file names, device file creation, specify symlinks to be created, specify file attributes to be set for the device file (including user and group ownership), and even specify actions to be taken (programs to be executed).
+
+Devices nodes are created automatically and then used by applications and operating system subsystems.
+System administrators can control how udev operates and craft special udev rules.
+** Device Nodes
+Character and block devices have device nodes; network devices do not.
+These device nodes can be used by programs to communicate with devices through nodes using normal I/O methods.
+A device driver may use multiple device nodes. Device nodes are located in the =/dev= directory.
+
+Command:
+#+begin_src bash
+$ ls -l /dev
+
+total 0
+crw------- 1 coop audio    14,  4 Jul  9 01:54 audio
+crw------- 1 root root     10, 62 Jul  9 01:54 autofs
+lrwxrwxrwx 1 root root          4 Jul  9 01:54 cdrom -> scd0
+lrwxrwxrwx 1 root root          4 Jul  9 01:54 cdrw -> scd0
+crw------- 1 coop root      5,  1 Jul  9 06:54 console
+....
+lrwxrwxrwx 1 root root          4 Jul  9 01:54 dvd -> scd0
+lrwxrwxrwx 1 root root          4 Jul  9 01:54 dvdwriter -> scd0
+....
+#+end_src
+
+Device nodes can be created with the following command:
+#+begin_src bash
+$ sudo mknod [-m mode] /dev/name <type> </major> <minor>
+e.g.
+sudo mknod -m 666 /dev/mycdrv c 254 1
+#+end_src
+
+[[file:images/device_node.png]]
+** Device Nodes Provide Hardware Access
+In addition to providing some required (statically created outside of udev) pseudo-devices, including =/dev/null= and =/dev/zero=, the device nodes present in =/dev= are the primary or first interaction with the hardware on a machine.
+
+Some common devices are:
++ =/dev/sd*= – devices appearing as hard drives
++ =/dev/ttyS*= – serial ports, often used as consoles
++ =/dev/snd/*= – various sound devices
+** udev Components
+/udev/ runs as a daemon (either ~udevd~ or ~systemd-udevd~) and monitors a netlink socket.
+When new devices are initialized or removed, the uevent kernel facility sends a message through the socket, which /udev/ receives and takes appropriate action to create or remove device nodes of the right names and properties according to the rules.
+
+The three components of udev are:
++ The ~libudev~ library which allows access to information about the devices.
++ The ~udevd~ or ~systemd-udevd~ daemon that manages the =/dev= directory.
++ The ~udevadm~ utility for control and diagnostics.
+
+The cleanest way to use /udev/ is to have a pure system; the =/dev= directory is empty upon the initial kernel boot, and then is populated with device nodes as they are needed.
+When used this way, one must boot using an /initramfs image/, which may contain a set of preliminary device nodes, as well as the the /udev/ infrastructure.
+** udev Rule Files
+/udev/ rules files are located under =/etc/udev/rules.d/<rulename>.rules= and =/usr/lib/udev/rules.d/<rulename>.rules= with names like:
+- 30-usb.rules
+- 90-mycustom.rules
+- 70-mouse.rules
+- 60-persistent-storage.rules
+
+There are two separate parts defined on a single line:
++ The first part consists of one or more match pairs denoted by ==.
+  These try to match a device’s attributes and/or characteristics to some value.
++ The second part consists of one or more assignment key-value pairs that assign a value to a name, such as a file name, assignment, even file permissions, etc.
+
+If no matching rule is found, it uses the default device node name and other attributes.
+#+begin_src bash
+$ cat /etc/udev/rules.d/99-fitbit.rules
+
+SUBSYSTEM=="usb", ATTR{idVendor}=="2687", ATTR{idProduct}=="fb01", SYMLINK+="fitbit", MODE="0666"
+#+end_src
+Or something that most devices have:
+#+begin_src bash
+$ cat /etc/udev/rules.d/60-vboxdrv.rules
+
+KERNEL=="vboxdrv", NAME="vboxdrv", OWNER="root", GROUP="vboxusers", MODE="0660"
+KERNEL=="vboxdrvu", NAME="vboxdrvu", OWNER="root", GROUP="root", MODE="0666"
+KERNEL=="vboxnetctl", NAME="vboxnetctl", OWNER="root", GROUP="vboxusers", MODE="0660"
+#+end_src
+** Creating udev Rules
+Rules files can be in three places, and if they have same name the priority order is:
+1. =/etc/udev/rules.d=
+2. =/run/udev/rules.d=
+3. =/usr/lib/udev/rules.d=
+
+The format for a udev rule is simple:
+#+begin_src bash
+<match><op>value [, ...] <assignment><op>value [, ... ]
+#+end_src
+There are two separate parts defined on a single line.
+The first part consists of one or more match pairs (denoted by double equal signs). These will match a device’s attributes and/or characteristics to some value.
+The second part consists of one or more assignment key-value pairs that assign a value to a name, such as a filename, group assignment, or even file permissions.
+
+Samples:
+#+begin_src bash
+KERNEL=="sdb", NAME="my-spare-disk"
+KERNEL=="sdb", DRIVER=="usb-disk", SYMLINK+="sparedisk"
+KERNEL=="sdb", RUN+="/usr/bin/my-program"
+KERNEL=="sdb", MODE="0660", GROUP="mygroup"
+#+end_src
+If no matching rule is found, it uses the default device node name.
+
+See ~man udev~ for explanation of the key values such as SYMLINK and RUN.
+** Examples of Rules Files
++ Here is an example of a rules file for a Fitbit device (command and output):
+  #+begin_src bash
+  $ cat /usr/lib/udev/rules.d/99-fitbit.rules
+  SUBSYSTEM=="usb", ATTR{idVendor}=="2687", ATTR{idProduct}=="fb01", SYMLINK+="fitbit", MODE="0666"
+  #+end_src
++ Here is an example for creating crash dumps and fast kernel loading with ~kdump~ / ~kexec~ (command and output):
+  #+begin_src bash
+  $ cat /usr/lib/udev/rules.d/98-kexec.rules
+  SUBSYSTEM=="cpu", ACTION=="add", PROGRAM="/bin/systemctl try-restart kdump.service"
+  SUBSYSTEM=="cpu", ACTION=="remove", PROGRAM="/bin/systemctl try-restart kdump.service"
+  SUBSYSTEM=="memory", ACTION=="online", PROGRAM="/bin/systemctl try-restart kdump.service"
+  SUBSYSTEM=="memory", ACTION=="offline", PROGRAM="/bin/systemctl try-restart kdump.service"
+  #+end_src
++ Here is an example for the kvm virtual machine hypervisor (command and output):
+  #+begin_src bash
+  $ cat /usr/lib/udev/rules.d/80-kvm.rules
+  KERNEL=="kvm", GROUP="kvm", MODE="0666"
+  #+end_src
+
+You can monitor how these rules are applied in real-time by running the following command:
+#+begin_src bash
+$ sudo udevadm monitor
+#+end_src
+Try plugging and unplugging a USB device as a quick way to generate output from the command.
 * Network Addresses
-** Overview
-** Network Addresses
+** IP Addresses
+IP addresses are used to uniquely identify nodes across the internet. They are assigned through RIRs (Regional Internet Registries).
+The IP address is the number that identifies your system on the network. It comes in two varieties.
+
+Types of IP Addresses
++ IPv4
+  IPv4 is a 32-bit address, composed of 4 octets (an octet is just 8 bits, or a byte).
+  Example: *148.114.252.10*
++ IPv6
+  IPv6 is a 128-bit address, composed of 8 16-bit octet pairs.
+  Example: *2003:0db5:6123:0000:1f4f:0000:5529:fe23*
+
+In either case, a set of reserved addresses is also included. We will focus on IPv4, as it is still what is most commonly in use.
+
+[[file:images/IPaddresses.png]]
+Addresses on the private network are not visible on the external Internet.
+
+The recommended way of using and referring to IP Addresses has changed dramatically over time, with conventions related to everything from hardware limitations to regional and political boundaries.
+
+/IPv4/ addresses still have the widest support, but their (relatively) small address size has made them scarce for many years now.
+While it is still possible to acquire these IP addresses in small quantities for public-facing services where the cost is factored in, large deployments of IPv4 may carry a significant startup cost at this time.
+
+Best practice currently suggests a dual-homed setup where both /IPv4/ and /IPv6/ are configured for services, with the decades-old goal of eventually treating /IPv6/ as a first-class citizen where /IPv4/ address might not be required at all for an internet service.
+** IPv4 Address Types
+IPv4 Address Types are as follows
+
++ Unicast
+  An address associated with a specific host. It might be something like *140.211.169.4* or *64.254.248.193*.
++ Network
+  An address whose host portion is set to all binary zeroes. Ex. *192.168.1.0*. (the host portion can be the last 1-3 octets as discussed later; here it is just the last octet).
++ Broadcast
+  An address to which each member of a particular network will listen.
+  It will have the host portion set to all 1 bits, such as in *172.16.255.255* or *148.114.255.255* or *192.168.1.255*. (the host portion is the last two octets in the first two cases, just the last one in the third case).
++ Multticast
+  An address to which appropriately configured nodes will listen. The address *224.0.0.2* is an example of a multicast address.
+  Only nodes specifically configured to pay attention to a specific multicast address will interpret packets for that multicast group.
 
 * Network Devices and Configuration
 ** Overview
