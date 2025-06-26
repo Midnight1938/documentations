@@ -1,7 +1,7 @@
 #+title: Lfs 207 Course
 #+date: <2024-12-17 Tue>
 #+duedate: <2024-06-30 Sun>
-#+STARTUP: inlineimages visual-line-mode org-superstar-mode
+#+STARTUP: inlineimages visual-line-mode
 
 * Table Of Contents :toc_1:
 - [[#course-introduction][Course Introduction]]
@@ -2211,6 +2211,7 @@ Note for the curious, there are 2 more bytes at the end of the MBR known as the 
 The MBR contains a partition table with four primary partitions and a larger number of extended partitions, as well as some basic code needed to boot the system.
 
 Representation of a disk partition table - boot code 446 bytes, partition 1 - 16 bytes, partition 2 - 16 bytes, partition 3 - 16 bytes, partition 4 - 17 bytes, 0x55AA.
+
 [[file:images/Representationofadiskpartitiontable.png]]
 
 Each entry in the partition table is 16 bytes long, and describes one of the four possible primary partitions. The information for each is:
@@ -3423,6 +3424,7 @@ Types of IP Addresses
 In either case, a set of reserved addresses is also included. We will focus on IPv4, as it is still what is most commonly in use.
 
 [[file:images/IPaddresses.png]]
+
 Addresses on the private network are not visible on the external Internet.
 
 The recommended way of using and referring to IP Addresses has changed dramatically over time, with conventions related to everything from hardware limitations to regional and political boundaries.
@@ -3442,13 +3444,653 @@ IPv4 Address Types are as follows
   An address to which each member of a particular network will listen.
   It will have the host portion set to all 1 bits, such as in *172.16.255.255* or *148.114.255.255* or *192.168.1.255*. (the host portion is the last two octets in the first two cases, just the last one in the third case).
 + Multticast
-  An address to which appropriately configured nodes will listen. The address *224.0.0.2* is an example of a multicast address.
+  An address to which appropriately configured nodes will listen.
+  The address *224.0.0.2* is an example of a multicast address.
   Only nodes specifically configured to pay attention to a specific multicast address will interpret packets for that multicast group.
+** Reserved Addresses
+Certain addresses and address ranges are reserved for special purposes. These addresses are never assigned or registered to anyone. They are generally not routable.
+Examples of Reserved Addresses:
 
++ 127.x.x.x
+  Reserved for the loopback (local system) interface, where 0 <= x <= 254. Generally, 127.0.0.1.
++ 0.0.0.0
+  Used by systems that do not yet know their own address.
+  Protocols like /DHCP/ and /BOOTP/ use this address when attempting to communicate with a server.
++ 255.255.255.255
+  Generic broadcast private address, reserved for internal use.
++ Other reserved addresses
+  Other examples of reserved address ranges include:
+  - 10.0.0.0 - 10.255.255.255
+  - 172.16.0.0 - 172.31.255.255
+  - 192.168.0.0 - 192.168.255.255
+  - Etc.
+  Each of these has a purpose.
+  For example, the familiar address range, 192.168.x.x is used only for local communications within a private network.
+
+You can see a long list of reserved addresses for both IPv4 and IPv6 on the [[https:wikipedia.org/wiki/Reserved_IP_addresses][Reserved IP addresses Wikipedia page]].
+** IPv6 Address Types
+IPv6 Address Types are as follows:
+
++ Unicast
+  A packet is delivered to one interface.
+  - Link-local: Auto-configured for every interface to have one. Non-routable.
+  - Global: Dynamically or manually assigned. Routable.
+  - Reserved for documentation.
++ Multicast
+  A packet is delivered to multiple interfaces.
++ Anycast
+  A packet is delivered to the nearest of multiple interfaces (in terms of routing distance).
++ IPv4-Mapped
+  An IPv4 address mapped to IPv6. For example, *::FFFF:a.b.c.d/96*
+
+In addition, IPv6 has some special types of addresses such as loopback, which is assigned to the lo interface, as *::1/128*.
+** IPv4 Address Classes
+Historically, IP addresses are based on defined classes.
+Classes A, B, and C are used to distinguish a network portion of the address from a host portion of the address. This is used for routing purposes.
+
+Class A addresses use 8 bits for the network portion of the address and 24 bits for the host portion of the address.
+Class B addresses use 16 and 16 bits respectively.
+While Class C addresses use 24 bits for the network portion and 8 bits for the host portion.
+
+Class D addresses are used for multicasting.
+Class E addresses are currently not used.
+
+| Network Class | Highest order octet range | Notes                                                                       |
+| ------------- |  ------------------------ | -----                                                                       |
+| A             |                     1-127 | 128 networks, 16,772,214 hosts per network, 127.x.x.x reserved for loopback |
+| B             |                   128-191 | 16,384 networks, 65,534 hosts per network                                   |
+| C             |                   192-223 | 2,097,152 networks, 254 hosts per network                                   |
+| D             |                   224-239 | Multicast addresses                                                         |
+| E             |                   240-254 | Reserved address range                                                      |
+** Netmasks
+/netmask/ is used to determine how much of the address is used for the network portion and how much for the host portion as we have seen. It is also used to determine network and broadcast addresses.
+
++ Class A addresses use 8 bits for the network portion of the address and 24 bits for the host portion of the address
++ Class B addresses use 16 bits for the network and 16 bits for the host
++ Class C addresses use 24 bits for the network and 8 bits for the host
++ Class D addresses are used for multicasting
++ Class E addresses are currently not used
+
+| Network Class | Decimal       | Hex         | Binary                              |
+| ------------- | -------       | ---         | ------                              |
+| A             |     255.0.0.0 | ff:00:00:00 | 11111111 00000000 00000000 00000000 |
+| B             |   255.255.0.0 | ff:ff:00:00 | 11111111 11111111 00000000 00000000 |
+| C             | 255.255.255.0 | ff:ff:ff:00 | 11111111 11111111 11111111 00000000 |
+
+We can calculate the network address by /anding/ (logical 'and') the IP address with the netmask.
+We are interested in the network addresses because they define a local network which consists of a collection of nodes connected via the same media and sharing the same network address.
+All nodes on the same network can directly see each other.
+
+Example:
+#+begin_src
+  172.16.2.17 ip address
+& 255.255.0.0 netmask
+  -----------------
+  172.16.0.0 network address
+#+end_src
+** Getting and Setting the Hostname
+The /hostname/ is simply a label to distinguish a networked device from other nodes. Historically, this has also been called a /nodename/.
+
+For DNS purposes, hostnames are appended with a period (dot) and a domain name, so that a machine with a hostname of antje could have a fully qualified domain name (FQDN) of *antje.linuxfoundation.org*.
+The hostname is generally specified at installation time, but can be changed at any time later.
+
+Any user can get the hostname with (command and output below):
+#+begin_src bash
+$ hostname
+wally
+#+end_src
+
+Changing hostname requires root privilege (command and output below):
+#+begin_src bash
+$ sudo hostname lumpy
+lumpy
+#+end_src
+
+The current value is always stored in =/etc/hostname= on most Linux distributions.
+To do this persistently so changes survive a reboot use the =hostnamectl= command, part of the systemd infrastructure:
+#+begin_src bash
+$ sudo hostnamectl set-hostname lumpy
+#+end_src
+
+Historically, making persistent changes involved changing configuration files in the =/etc= directory tree. On Red Hat-based systems this was /etc/sysconfig/network, on Debian-based systems this was /etc/hostname and on SUSE-based systems it was =/etc/HOSTNAME=. However, one should use the ~hostnamectl~ command on modern systems:
+#+begin_src bash
+$ hostnamectl
+Static hostname: Pahadi
+       Icon name: computer-laptop
+         Chassis: laptop 💻
+      Machine ID: 869ddf2cc8a5476192e5d644e0b1326c
+         Boot ID: c85f0083c0fb441b9e60a5050e084228
+Operating System: EndeavourOS
+          Kernel: Linux 6.15.3-arch1-1
+    Architecture: x86-64
+ Hardware Vendor: Dell Inc.
+  Hardware Model: Inspiron 16 Plus 7630
+Firmware Version: 1.19.0
+   Firmware Date: Tue 2024-12-10
+    Firmware Age: 6month 2w
+#+end_src
+
+To see a usage message, type the following command:
+#+begin_src bash
+$ hostnamectl --help
+
+hostnamectl [OPTIONS...] COMMAND ...
+
+Query or change system hostname
+
+-h --help              Show this help
+   --version           Show package version
+   --no-ask-password   Do not prompt for password
+....
+#+end_src
+** Network Time Protocol
+Many protocols require consistent, if not accurate time to function properly.
+
+The security of many encryption systems is highly dependent on proper time.
+Industries such as commodities or stock trading require highly accurate time, as a difference of only seconds can mean hundreds, if not thousands of dollars.
+
+The Network Time Protocol (NTP) is a method to update and synchronize system time. NTP consists of a daemon and a protocol.
+NTP time sources are divided up into ”strata”:
++ A stratum 0 clock is a special purpose time device (Atomic clock, GPS radio, etc.)
++ A stratum 1 server is any NTP server connected directly to a stratum 0 source (over serial or the like)
++ A stratum 2 server is any NTP server which references a stratum 1 server using NTP
++ A stratum 3 server is any NTP server which references a stratum 2 server using NTP
+
+NTP may function as a client, server, or a peer.
++ client - acquires time from a server or a peer
++ server - provides time to a client
++ peers - synchronize time between other peers regardless of the defined servers
+
+[[file:images/ntp.jpg]]
+** NTP Applications
+There are several NTP applications; some of the most common are:
+
++ ~ntp~ - the default
++ ~chrony~ - designed to work in a wide range of environments, including intermittent network connections and virtual machines
++ ~systemd-timesyncd~ - an ntp client only included in the systemd package
+
+Implementation of NTP services varies widely between distributions. The most common elements of the configuration are similar for most popular time synchronization applications.
+Here are the common locations for the ntp applications configuration files:
++ ~ntp~ - =/etc/ntp.conf=
++ ~chrony~ - =/etc/chrony.conf=
++ ~systemd-timesyncd~ - =/etc/systemd/timesyncd.conf=
+Consult the related man pages for configuration details.
+
+The various ntp applications may conflict with each other, so only have one ntp application active at a time.
+** Configuring the ntpd Client
+A good NTP server is only as good as its time source.
+The [[https:pool.ntp.org/en/][NTP Pool Project]] was created to alleviate the load that was crippling the small number of NTP servers.
+The pool directive is aware of round-robin DNS servers and allows a different IP address on each request.
+If the connection allows peers, the pool command will establish peers on its own.
+
+The classic server directive may be used if desired.
+
+To configure your NTP server to use NTP Pool, edit =/etc/ntp.conf= and add or edit the following settings:
+#+begin_src bash
+$ nano /etc/ntp.conf
+
+driftfile /var/lib/ntp/ntp.drift
+pool 0.pool.ntp.org
+pool 1.pool.ntp.org
+pool 2.pool.ntp.org
+pool 3.pool.ntp.org
+#+end_src
+
+The ~ntpdc -c~ peers command can show the time differential between the local system and configured time servers.
+The ~timedatectl~ command is in many distributions and may be used to query and control the system time and date. ~timedatectl~ is part of the systemd landscape and supports additional options when used with ~systemd-timesyncd~.
+#+begin_src bash
+$ timedatectl
+               Local time: Sun 2023-03-05 16:13:50 UTC
+           Universal time: Sun 2023-03-05 16:13:50 UTC
+                 RTC time: Sun 2023-03-05 16:13:50
+                Time zone: Etc/UTC (UTC, +0000)
+System clock synchronized: yes
+              NTP service: active
+          RTC in local TZ: no
+#+end_src
+** Configuring the ntpd Server
+The configuration elements for the ntp server are contained in the =/etc/ntp.conf= file.
+
+Here are some of the ntp server relevant items:
++ Declare the local machine to be a time reference
+  - The /server/ and /fudge/ directives
++ Regulate who can query the time server with ~ntpq~ and ~ntpdc~ commands (see /CVE-2013-5211/)
+  - The restrict directives
++ Declare which systems are ntp peers
+  - The peers are listed in the =/etc/ntp.conf= file
++ Start NTP daemon
+
+*** Access Control
+Here is an example of access control entries in =/etc/ntp.conf=.
+_/etc/ntp.conf: access control_
+
+#+begin_src bash
+# Default policy prevents queries
+restrict default nopeer nomodify notrap noquery
+# Allow queries from a particular subnet
+restrict 123.123.x.0 mask 255.255.255.0 nopeer nomodify notrap
+# Allow queries from a particular host
+restrict 131.243.1.42 nopeer nomodify notrap noquery
+# Unrestrict localhost
+restrict 127.0.0.1
+#+end_src
+*** Peer Configuration
+Here is an example of ntp peer configuration entries.
+_/etc/ntp.conf: peer configuration_
+
+#+begin_src bash
+peer 128.100.49.12
+peer 192.168.0.1
+#+end_src
+*** Declaring Self a Time Source
+This is an example of the ntp declaring itself as an NTP server. The second line, the /fudge/ entry, specifies this server is a stratum 10 server.
+_/etc/ntp.conf: declare self a time source_
+
+#+begin_src bash
+server 127.127.1.0
+fudge 127.127.1.0 stratum 10
+#+end_src
 * Network Devices and Configuration
-** Overview
-** Network Devices and Configuration
+** Network Devices
+Unlike block and character devices, network devices are not associated with special device files, also known as device nodes. Rather than having associated entries in the =/dev= directory, they are known by their names.
 
+These names usually consist of a type identifier followed by a number, as in:
++ eth0, eth1, eno1, eno2, etc., for ethernet devices.
++ wlan0, wlan1, wlan2, wlp3s0, wlp3s2, etc., for wireless devices.
++ br0, br1, br2, etc., for bridge interfaces.
++ vmnet0, vmnet1, vmnet2, etc., for virtual devices for communicating with virtual clients.
+
+Historically, multiple virtual devices could be associated with single physical devices; these were named with colons and numbers; so, eth0:0 would be the first alias on the eth0 device.
+This was done to support multiple IP addresses on one network card. However, with the use of ~ip~ instead of ~ifconfig~, this method is deprecated and we will not pursue it. This is not compatible with IPv6.
+
+The historical device naming conventions encountered difficulties, particularly when multiple interfaces of the same type were present.
+For example, suppose you have two network cards; one would be named eth0 and the other eth1. However, which physical device should be associated with each name?
+
+The simplest method would be to have the first device found be eth0, the second eth1, etc. Unfortunately, probing for devices is not deterministic for modern systems, and devices may be located or plugged in an unpredictable order.
+Thus, you might wind up with the Internet interface swapped with the local interface. Even if hardware does not change, the order in which interfaces are located has been known to vary with kernel version and configuration.
+
+Many system administrators have solved this problem in a simple manner, by hard-coding associations between hardware (MAC) addresses and device names in system configuration files and startup scripts.
+While this method has worked for years, it requires manual tuning and had other problems, such as when MAC addresses were not fixed; this can happen in both embedded and virtualized systems.
+** Predictable Network Interface Device Names
+The Predictable Network Interface Device Names (PNIDN) is connected to /udev/ and integrated with systemd. There are now 5 types of names that devices can be given:
+
++ Incorporating Firmware or BIOS provided index numbers for onboard devices
+  Example: eno1
++ Incorporating Firmware or BIOS provided PCI Express hotplug slot index numbers
+  Example: ens1
++ Incorporating physical and/or geographical location of the hardware connection
+  Example: enp2s0
++ Incorporating the MAC address
+  Example: enx7837d1ea46da
++ Using the old classic method
+  Example: eth0
+
+For example, on a machine with two onboard PCI network interfaces that would have been eth0 and eth1 (commands and outputs below):
+#+begin_src bash
+$ ip link show | grep enp
+2: enp4s2: <NO-CARRIER,BROADCAST,MULTICAST,UP> mtu 1500 qdisc pfifo_fast state DOWN mode DEFAULT qlen 1000
+3: enp2s0: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc pfifo_fast state UP mode DEFAULT qlen 1000
+
+$ ifconfig | grep enp
+enp2s0: flags=4163<UP,BROADCAST,RUNNING,MULTICAST> mtu 1500
+enp4s2: flags=4099<UP,BROADCAST,MULTICAST mtu> 1500
+#+end_src
+These names are correlated with the physical locations of the hardware on the PCI system (command and output below):
+#+begin_src bash
+$ lspci | grep Ethernet
+02:00.0 Ethernet controller: Marvell Technology Group Ltd. 88E8056 PCI-E Gigabit Ethernet Controller (rev 12)
+04:02.0 Ethernet controller: Marvell Technology Group Ltd. 88E8001 Gigabit Ethernet Controller (rev 14)
+#+end_src
+The triplet of numbers at the beginning of each line from the ~lspci~ output is the bus, device (or slot), and function of the device; hence it reveals the physical location.
+
+Likewise, for a wireless device that previously would have been simply named wlan0 (commands and outputs below):
+#+begin_src bash
+$ ip link show | grep wl
+3: wlp3s0: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc mq state UP mode DORMANT qlen 1000
+
+$ lspci | grep Centrino
+03:00.0 Network controller: Intel Corporation Centrino Advanced-N 6205 [Taylor Peak] (rev 34)
+#+end_src
+We see the same pattern. It is easy to turn off the new scheme and go back to the classic names. We will leave that as a research project. In what follows, we will mostly follow the classic names for definiteness and simplicity.
+** Network Configuration Files
+Each distribution has its own set of files and/or directories, and they may be slightly different, depending on your distribution version.
+
++ Red Hat
+  #+begin_src bash
+  /etc/sysconfig/network
+  /etc/sysconfig/network-scripts/ifcfg-ethX
+  /etc/sysconfig/network-scripts/ifcfg-ethX:Y
+  /etc/sysconfig/network-scripts/route-ethX
+  #+end_src
++ Debian
+  #+begin_src bash
+  /etc/network/interfaces
+  #+end_src
++ SUSE
+  #+begin_src bash
+  /etc/sysconfig/network
+  #+end_src
+
+When using =systemd= (systemd is getting more standardized), it is often preferable to use Network Manager.
+On newer Linux distributions, these configuration files may be gone or empty.
+** Network Manager Configuration Files
+Network Manager can use the traditional network files from several distributions. The networking profiles are supported by plugins. The key-value is the preferred file format.
+
+There are several optional plugins for traditional configuration compatibility:
++ ~ifupdown~ for =/etc/network/interfaces=
++ ~ifcfg-rh~ for =/etc/sysconfig/network-scripts=
++ ~ifcfg-suse~ is for simple compatibility for SUSE and openSUSE
++ ~key-file~ is a generic replacement for system specific configuration files
+
+There is a configuration option in =/etc/NetworkManager/NetworkManager.conf= in the [main] section that lists which plugins for configuration processing are to be used in a comma-separated list.
+For more details, see the [[https:networkmanager.dev/docs/api/latest/NetworkManager.conf.html][NetworkManager.conf documentation]].
+** Network Manager
+Once upon a time, network connections were almost all wired (Ethernet) and did not change unless there was a significant change to the system.
+
+As a system was booted, it consulted the network configuration files in the =/etc= directory subtree in order to establish the interface properties such as static or dynamic (DCHP) address configuration, whether the device should be started at boot, etc.
+
+If there were multiple network devices, policies had to be established as to what order they would be brought up, which networks they would connect to, what they would be called, etc.
+
+As wireless connections became more common (as well as hotplug network devices such as on USB adapters), configuration became much more complicated, both because of the transient nature of the hardware and that of the specific networks being connected to.
+
+However, modern systems often have dynamic configurations:
++ Networks may change as a device is moved from place to place
++ Wireless devices may have a large choice of networks to hook into
++ Devices may change as hardware, such as wireless devices, are plugged in or turned on and off
+
+The previously discussed configuration files were created to deal with more static situations and are very distribution-dependent. A step away from distribution-dependent interfaces and configuration files was a big advance.
+
+While Network Manager still uses configuration files, it is usually best to rely on its various utilities for manipulating and updating them. Network Manager should be almost the same on different systems.
+** Network Manager Interfaces
+If you are using your laptop in a hotel room or a coffee shop, you are probably going to use whatever graphical interface your Linux distribution's desktop offers.
+Every Linux desktop (GNOME, KDE, XFCE, etc.) has one, usually reached by clicking on something in the horizontal panel.
+You can use this to select between different networks, configure security and passwords, turn devices off and on, etc.
+
+If you are making a configuration change on your system that is likely to last for a while, you are likely to use ~nmtui~ (network manager text user interface), as it has almost no learning curve and will edit the underlying configuration files for you. It uses the /ncurses/ library interface.
+
+If you need to run scripts that change the network configuration, you will want to use ~nmcli~ (network manager command line interface). Or, if you are a command line junkie, you may want to use this instead of ~nmtui~.
+
+If the GUI is properly done, you should be able to accomplish any task using any of these three methods.
+However, we will focus on ~nmtui~ and ~nmcli~ because they are distribution-independent and hide any differences in underlying configuration files.
+** nmtui
+~nmtui~ is rather straightforward to use. You can navigate with either the arrow keys or the tab key.
+
+Besides activating or editing connections, you also set the system hostname.
+However, some operations, such as this, cannot be done by normal users and you will be prompted for the root password to go forward.
+
+The ~nmtui~ menu for wireless networks should look similar to the GUI interface.
+Sometimes it’s useful to use this interface to view configurations for other wireless networks while configuring a new one.
+** nmcli
+~nmcli~ is the command line interface to Network Manager. You can issue direct commands, but it also has an interactive mode.
+
+For many details and examples, you can visit the Networking/CLI Fedora wiki webpage or you can type the following command:
+#+begin_src bash
+$ man nmcli-examples
+#+end_src
+** Routing
+Routing is the process of selecting paths in a network along which to send network traffic.
+The routing table is a list of routes to other networks managed by the system.
+It defines paths to all networks and hosts; local packets are sent directly, while remote traffic is sent to routers.
+
+To see the current routing table, you can use either ~route~ (deprecated) or the ~ip~ command:
+#+begin_src bash
+$ route -n
+$ ip route
+#+end_src
+** Default Route
+The default route is the way packets are sent when there is no other match in the routing table for reaching the specified network.
+
+It can be obtained dynamically using DHCP. However, it can also be manually configured (static). With the nmcli command it can be done via:
+#+begin_src bash
+$ sudo nmcli con mod virbr0 ipv4.routes 192.168.10.0/24 +ipv4.gateway 192.168.122.0
+$ sudo nmcli con up virbr0
+#+end_src
+or you can modify configuration files directly, thus avoiding to modify files in =/etc= by hand.
+
+On Red Hat-derived systems, you can modify the =/etc/sysconfig/network= file by putting in the line:
+#+begin_src bash
+GATEWAY=x.x.x.x
+#+end_src
+or alternatively in =/etc/sysconfig/network-scripts/ifcfg-ethX= on a device-specific basis in the configuration file for the individual NIC.
+
+On Debian-derived systems, the equivalent is putting:
+#+begin_src bash
+gateway=x.x.x.x
+#+end_src
+in the =/etc/network/interfaces= file.
+
+On either system, you can set the default gateway at runtime with these commands:
+#+begin_src bash
+$ sudo ip route add default via 192.168.1.10 dev enp2s0
+$ ip route
+default via 192.168.1.10 dev enp2s0
+default via 192.168.1.1 dev enp2s0 metric 1024
+192.168.1.0/24 dev enp2s0 proto kernel scope link src 192.168.1.100
+#+end_src
+Note that this might *wipe out* your network connection! You can restore either by resetting the network, or in the above example by running this command:
+#+begin_src bash
+$ sudo ip route add default via 192.168.1.1 dev enp2s0
+#+end_src
+These changes are not persistent and will not survive a system restart.
+** Static Routes
+Static routes are used to control packet flow when there is more than one router or route. They are defined for each interface and can be either persistent or non-persistent.
+
+When the system can access more than one router, or perhaps there are multiple interfaces, it is useful to selectively control which packets go to which router.
+
+Either the ~route~ or ~ip~ command can be used to set a non-persistent route as in:
+#+begin_src bash
+$ sudo ip route add 10.5.0.0/16 via 192.168.1.100
+#+end_src
+
+On a Red Hat-based system, a persistent route can be set by editing the =/etc/sysconfig/network-scripts/route-ethX= file as shown by the following command and its output:
+#+begin_src bash
+$ cat /etc/sysconfig/network-scripts/route-eth0
+10.5.0.0/16 via 172.17.9.1
+#+end_src
+
+On a Debian-based system you need to add lines to the =/etc/network/interfaces= file, such as:
+#+begin_src bash
+iface eth1 inet dhcp
+post-up ip route add 10.1.2.51 dev eth1
+post-up ip route add 10.1.2.52 dev eth1
+#+end_src
+
+On a SUSE-based system you need to add to or create a file such as =/etc/sysconfig/network/ifroute-eth0= with lines like:
+#+begin_src bash
+# Destination Gateway Netmask Interface [Type] [Options]
+192.168.1.150 192.168.1.1 255.255.255.255 eth0
+10.1.1.150 192.168.233.1.1 eth0
+10.1.1.0/24 192.168.1.1 - eth0
+#+end_src
+where each field is separated by tabs.
+** Teaming and Bonding Network Interfaces
+Teaming and Bonding interfaces allow dynamic network interface configuration to provide higher throughput and additional robustness to the network.
+
++ Bonding
+  Uses a kernel module to provide aggregation of network links to provide fail-over, redundancy and performance enhancements
++ Teaming
+  Is similar to bonding, except teaming uses a userspace service named teamed.
+  The Teaming configuration method has been listed as deprecated and is scheduled to be removed in the future.
+
+To facilitate a smooth conversion from Teaming to Bonding, the ~team2bond~ utility is available to convert configuration files.
+** Bonding Network Interfaces
+There are several methods for configuring Bonding interfaces:
++ sysfs
+  Direct changes to the =/sys= pseudofilesystem. Changes are not saved.
++ iproute2
+  Supports bonding via the ~ip~ command; see ~man 8 ip-link~ for details. Changes are not saved.
++ NetworkManager
+  All NetworkManager user interfaces support bonding. Changes are saved. The NetworkManager configuration files can also be edited with your favorite text editor.
+
+For more details on the =/sys= interface to bonding, check the [[https:kernel.org/doc/Documentation/networking/bonding.txt][online documentation]].
+** Creating Bonding Network Interface with nmcli
+Creating a configuration for a bonding interface with ~nmcli~ involves a few steps. Minimal steps are:
+1. Identify adapters: Use ~nmcli device status~
+2. Create bonding device: Use ~nmcli connection add~
+3. Attach interface to the bond: Create a connection from the adapter to the bond device using ~nmcli connection add~
+4. Set the bond adapter online: Issue an ~nmcli connection up~ command for the bond adapter
+5. Reboot: Although the reboot is not absolutely required, it is strongly recommended. A reboot will clean up any configuration fragments left around
+
+For more information on ~nmcli~, check the [[https:wiki.gnome.org/Projects/NetworkManager/SystemSettings/][nmcli documentation]].
+
+You can see a bonding example using ~nmcli~ below. On the command line:
+#+begin_src bash
+nmcli connection add type bond \
+     con-name bond0 \
+     ifname bond0 \
+     bond.options "mode=active-backup,miimon=1000"
+nmcli connection add type ethernet slave-type bond \
+     con-name bond0-port1 \
+     ifname enp0s20u1u1 \
+     master bond0
+nmcli connection add type ethernet slave-type bond \
+     con-name bond0-port2 \
+     ifname enp0s20u1u2 \
+     master bond0
+nmcli connection up bond0
+nmcli device status
+reboot
+nmcli device status
+#+end_src
+For more information on bonding and bonding options see the [[https:kernel.org/doc/Documentation/networking/bonding.txt][Linux Ethernet Bonding Driver HOWTO documentation]].
+** /etc/hosts
+The =/etc/hosts= file holds a local database of hostnames and IP addresses.
+It contains a set of records (each taking one line) which map IP addresses with corresponding hostnames and aliases.
+
+A typical =/hosts= file looks like:
+#+begin_src bash
+127.0.0.1 localhost localhost.localdomain localhost4 localhost4.localdomain4
+::1 localhost localhost.localdomain localhost6 localhost6.localdomain6
+192.168.1.100 hans hans7 hans64
+192.168.1.150 bethe bethe7 bethe64
+192.168.1.2 hp-printer
+192.168.1.10 test32 test64 oldpc
+#+end_src
+Such static name resolution is primarily used for local, small, isolated networks.
+It is generally checked before DNS is attempted to resolve an address; however, this priority can be controlled by the =/etc/nsswitch.conf= file, but it is not often used today.
+
+Command:
+#+begin_src bash
+student@ubuntu:/etc$ ls -l host*
+
+-rw-r--r-- 1 root root  92 Oct 22 2015 host.conf
+-rw-r--r-- 1 root root   7 Apr 21 08:46 hostname
+-rw-r--r-- 1 root root 221 Apr 21 08:46 hosts
+-rw-r--r-- 1 root root 411 Apr 20 17:14 hosts.allow
+-rw-r--r-- 1 root root 711 Apr 20 17:14 hosts.deny
+#+end_src
+The other host-related files in =/etc= are =/etc/hosts.deny= and =/etc/hosts.allow=. These are self-documenting and their purpose is obvious from their names.
+The allow file is searched first and the deny file is only searched if the query is not found there.
+
+=/etc/host.conf= contains general configuration information; it is rarely used.
+** DNS and Name Resolution
+Name resolution is the act of translating hostnames to the IP addresses of their hosts. For example, a browser or email client will take /training.linuxfoundation.org/ and resolve the name to the IP address of the server (or servers) that serve /training.linuxfoundation.org/ in order to transmit to and from that location.
+
+This can be done in either a static fashion using the =/etc/hosts= file, or dynamically using DNS servers.
+
+There are several command line tools that can be used to resolve the IP address of a hostname:
+#+begin_src bash
+$ [dig | host | nslookup] linuxfoundation.org
+#+end_src
++ ~dig~: generates the most information and has many options
++ ~host~: more compact
++ ~nslookup~: older and not recommended; can have wrong answers, especially with DNSSEC.
+
+~dig~ is the newest and the others are sometimes considered deprecated, but the output for host is the easiest to read and contains the basic information.
+
+One sometimes also requires reverse resolution: converting an IP address to a host name.
+Try feeding these three utilities a known IP address instead of a hostname, and examine the output.
+** Using Dig
+The ~dig~ utility gives the most correct answer among shipped tools.
++ Default output is often too verbose for simple tasks or scripting
++ Can view entire resolution chain
++ Can view and verify /DNSSEC/ operation
+
+Some useful options:
++ ~+trace~ Check the entire path, from the root servers (by default)
++ ~-t [record type]~ specify the record (including /A/, /TXT/, /CNAME/, /MX/)
+
+Here is an example of using ~dig~ with the default address lookup behavior:
+#+begin_src bash
+$ dig linuxfoundation.org
+
+; <<>> DiG 9.16.27-Debian <<>> linuxfoundation.org
+;; global options: +cmd
+;; Got answer:
+;; ->>HEADER<<- opcode: QUERY, status: NOERROR, id: 54765
+;; flags: qr rd ra; QUERY: 1, ANSWER: 1, AUTHORITY: 0, ADDITIONAL: 1
+#+end_src
+This is showing a lookup for an ~A~ record (IPv4), flags, transport, and timing information.
+
+Let’s try with reverse resolution and make it much less verbose:
+#+begin_src bash
+$ dig -x 1.1.1.1 +short
+
+one.one.one.one.
+#+end_src
+** DNS
+If name resolution cannot be done locally using the =/etc/hosts= file, then the system will query a /DNS/ (Domain Name System) server.
+
+/DNS/ is dynamic and consists of a network of servers which a client uses to look up names.
+The service is distributed; any one DNS server has only information about its zone of authority; however, all of them together can cooperate to resolve any name.
+
+The machine's usage of DNS is configured in the =/etc/resolv.conf= file, which historically has looked like:
+#+begin_src bash
+search example.com aps.org
+nameserver 192.168.1.1
+nameserver 8.8.8.8
+#+end_src
+which:
++ Can specify particular domains to search.
++ Defines a strict order of nameservers to query.
++ May be manually configured or updated from a service such as /DHCP/ (Dynamic Host Configuration Protocol).
+
+Most modern systems will have an =/etc/resolv.conf= file generated automatically, such as:
+#+begin_src bash
+# Generated by NetworkManager
+192.168.1.1
+#+end_src
+which was generated by NetworkManager invoking /DHCP/ on the primary network interface.
+
+[[file:images/DNS_zone.png]]
+** Networking Problem Troubleshooting
+Network problems can be caused either by software or hardware, and can be as simple as is the device driver loaded, or is the network cable connected.
+If the network is up and running but performance is terrible, it really falls under the banner of performance tuning, not troubleshooting.
+The problems may be external to the machine, or require adjustment of the various networking parameters, including buffer sizes, etc.
+
+The following items need to be checked when there are issues with networking:
++ IP configuration
+  Use ~ifconfig~ or ~ip~ to see if the interface is up, and if so, if it is configured
++ Network Driver
+  If the interface cannot be brought up, maybe the correct device driver for the network card(s) is not loaded.
+  Check with ~lsmod~ if the network driver is loaded as a kernel module, or by examining relevant pseudofiles in =/proc= and =/sys=, such as =/proc/interrupts= or =/sys/class/net=.
++ Connectivity
+  Use ~ping~ to see if the network is visible, checking for response time and packet loss.
+  ~traceroute~ can follow packets through the network, while ~mtr~ can do this in a continuous fashion.
+  Use of these utilities can tell you if the problem is local or on the Internet.
++ Default gateway and routing configuration
+  Run ~route -n~ and see if the routing table make sense
++ Hostname resolution
+  Run ~dig~ or ~host~ on a URL and see if DNS is working properly.
+** Network Diagnostics
+A number of basic network utilities are in every system administrator's toolbox:
+
++ ~ping~
+  Sends 64-byte test packets to designated network hosts and tries to report back on the time required to reach it (in milliseconds), any lost packets, and some other parameters.
+  Note that the exact output will vary according to the host being targeted, but at least you can see that the network is working and the host is reachable.
++ ~traceroute~
+  Is used to display a network path to a destination. It shows the routers packets flow through to get to a host, as well as the time it takes for each hop.
++ ~mtr~
+  Combines the functionality of ping and traceroute and creates a continuously updated display, like top.
+
+Note that some distributions (such as RHEL 7) require root privilege (as with sudo) in order to run the first three diagnostic utilities.
+
+Example commands:
+#+begin_src bash
+$ ping -c 10 linuxfoundation.org
+$ traceroute linuxfoundation.org
+$ mtr linuxfoundation.org
+#+end_src
 * LDAP
 ** Overview
 ** LDAP
