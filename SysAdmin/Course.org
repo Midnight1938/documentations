@@ -4519,12 +4519,441 @@ Normally, post-routing is the last examination or modification point as the pack
 + The destination address of the packet is that of the remote system that initiated the connection
 + The source address of the packet will be changed from the internal address of the service to that of the firewall’s public facing adapter
 * System Init: systemd History and Customization
-** Overview
-** System Init: systemd, SystemV and Upstart
+** init
+The =/sbin/init= program (usually just called ~init~) is the first user-level process (or task) run on the system and continues to run until the system is shut down.
+Traditionally, it has been considered the parent of all user processes, although technically that is not true, as some processes are started directly by the kernel.
 
+~init~ coordinates the later stages of the boot process, configures all aspects of the environment, and starts the processes needed for logging into the system.
+~init~ also works closely with the kernel in cleaning up after processes when they terminate.
+
+Traditionally, nearly all distributions based the init process on UNIX's venerable SysVinit' software.
+However, this scheme was developed decades ago under rather different circumstances:
++ The target was multi-user mainframe systems (and not personal computers, laptops, and other devices)
++ The target was a single processor system
++ Startup (and shutdown) time was not an important matter; it was far less important than getting things right.
+
+Startup was viewed as a serial process, divided into a series of sequential stages (termed run levels). Each stage required completion before the next could proceed.
+Thus, startup did not easily take advantage of the parallel processing that could be done on multiple processors or cores.
+
+Secondly, shutdown/reboot was seen as a relatively rare event, and exactly how long it took was not considered important; today Linux systems usually boot in a manner of seconds.
+
+Three most common implementations include ~systemd~, ~Upstart~ and ~SysVinit~, but all major distributions have now moved to ~systemd~.
+
+Modern systems have required newer methods with enhanced capabilities.
+** Startup Alternatives
+To deal with the intrinsic limitations in ~SysVinit~, new methods of controlling system startup were developed.
+While there are others, two main schemes were adopted by Enterprise distributors, ~Upstart~ and ~systemd~.
+
++ Upstart
+  - Developed by Ubuntu and first included in 2006
+  - Adopted in Fedora 9 (in 2008) and in RHEL 6 and its clones
+  - Was also used in various embedded and mobile devices
++ systemd
+  - Fedora was the first major distribution to adopt it in 2011
+  - RHEL and SUSE followed
+  - Ubuntu 16.04 replaced Upstart with systemd
+  - All important Linux distributions are now based on systemd
+
+Every other major Linux distribution has now adopted ~systemd~ and configured it as the default.
+Even Ubuntu phased out ~Upstart~ in its favor.
+
+Migration to ~systemd~ was non-trivial, and bugs and missing features could be very disabling, so essential compatibility layers were adopted and still exist for legacy software. Thus, ~SysVinit~ utility compatibility wrappers still persist.
+
+The history of ~systemd~ development and adoption is rather complicated, and colorful personalities ensured not all the discussion was both friendly and technical. But this holy war is over as far as we are concerned here.
+
+In the following, we will concentrate just on ~systemd~. For the most part, we will ignore ~SysVinit~ as well as ~Upstart~, which is no longer used in any significant way.
+** systemd Features
+The ~systemd~ system and session manager for Linux is now dominant in most major distributions. Features include the following:
++ Boots faster than previous init systems
++ Provides aggressive parallelization capabilities
++ Uses socket and D-Bus activation for starting services
++ Replaces shell scripts with programs
++ Offers on-demand starting of daemons
++ Keeps track of processes using cgroups
++ Maintains mount and automount points
++ Implements an elaborate transactional dependency-based service control logic
++ Provides detailed start and stop functionality, including similar abilities to ~cron~
+
+Instead of bash scripts, systemd uses =.service= files.
+Granular logging is provided by default using the name of the unit.
+Tracking and creating user processes without root privileges is another powerful ability of ~systemd~.
+** systemd Configuration File Locations
+~systemd~ allows for multiple locations for its unit files, allowing for processes running under a non-root user, and inheritance from system unit files.
+Here are some typical locations (but may vary by distribution):
++ System unit files: =/etc/systemd/system= and =/lib/systemd/system=
++ User unit files: =/etc/systemd/user= and =~/.config/systemd/user=
+
+On most systems, =/lib/systemd/= is a symlink to =/usr/lib/systemd/=.
+
+Here is an example of a standard system unit file from Debian:
+#+begin_src bash
+$ cat /lib/systemd/system/dbus.service
+[Unit]
+Description=D-Bus System Message Bus
+Documentation=man:dbus-daemon(1)
+Requires=dbus.socket
+
+[Service]
+ExecStart=/usr/bin/dbus-daemon --system --address=systemd: --nofork --nopidfile --systemd-activation  --syslog-only
+ExecReload=/usr/bin/dbus-send --print-reply --system --type=method_call --dest=org.freedesktop.DBus / org.freedesktop.DBus.ReloadConfig OOMScoreAdjust=-900
+#+end_src
+Unit files can be quite complex. In this example, you can see a way to include a link to documentation and different methods for starting and restarting the service.
+** systemctl
+~systemctl~ is the main utility for managing services. Some ~systemctl~ commands can be run as non-root user, others require running as root or with sudo. Its basic syntax is:
+#+begin_src bash
+$ systemctl [options] command [name]
+#+end_src
+
+Below you can see some example commands of how you can use ~systemctl~.
+
++ To show the status of everything that systemd controls:
+  #+begin_src bash
+  $ systemctl
+  #+end_src
++ To show all available services:
+  #+begin_src bash
+  $ systemctl list-units -t service --all
+  #+end_src
++ To show only active services:
+  #+begin_src bash
+  $ systemctl list-units -t service
+  #+end_src
++ To start (activate) or stop (deactivate) one or more units:
+  #+begin_src bash
+  $ sudo systemctl start foo
+  $ sudo systemctl start foo.service
+  $ sudo systemctl start /path/to/foo.service
+  $ sudo systemctl stop foo.service
+  #+end_src
+  where a unit can be a service or a socket.
+
+In a similar fashion, you can see user units:
+#+begin_src bash
+$ systemctl list-units --user 'xdg*'
+
+UNIT                            LOAD    ACTIVE  SUB      DESCRIPTION
+xdg-desktop-portal-gtk.service  loaded  active  running  Portal service (GTK+/GNOME implementation)
+xdg-desktop-portal.service      loaded  active  running  Portal service
+xdg-document-portal.service     loaded  active  running  flatpak document portal service
+xdg-permission-store.service    loaded  active  running  sandboxed app permission store
+
+LOAD = Reflects whether the unit definition was properly loaded.
+ACTIVE = The high-level unit activation state, i.e. generalization of SUB.
+SUB = The low-level unit activation state, values depend on unit type.
+4 loaded units listed. Pass --all to see loaded but inactive units, too.
+To show all installed unit files use 'systemctl list-unit-files'.
+#+end_src
+We limited our output to only units starting with xdg under a desktop Xorg session in the command above because there are a large number of user units too.
 * Backup and Recovery Methods
-** Overview
-** Backup and Recovery Methods
+** Why Backups?
+Whether you are administering only one personal system or a network of many machines, system backups are very important.
+
+On-disk data is an important work product and is therefore a commodity that we wish to protect.
+Re-creating lost data costs time and money. Some data may even be unique and there may be no way to re-create it.
+
+While storage media reliability has increased, so has drive capacity. Even if the failure rate per byte decreases, unpredictable failures still occur.
+It may be pessimistic to say there are only two kinds of drives; those that have failed and those that will fail, but it is essentially true. Using /RAID/ helps, but backups are still needed.
+
+No software is perfect. Bugs may destroy or corrupt data. Even stable programs long in use can have problems.
+
+Everyone has heard OOPS! (or something much worse) coming from the next cubicle (or from their own mouth) at one time or another.
+Sometimes just a simple typing error can cause large scale destruction of files and data.
+
+It could be the canonical disgruntled employee or an external hacker with a point to make. Security concerns and backup capabilities are very strongly related.
+
+Files can just disappear without you knowing how, who, or even when it occurred. Sometimes restoring to an earlier snapshot of all or part of the system may be required.
+** What Do We Need to Backup?
+Some data is critical for backup, some less critical, and some never needs saving.
+
+What Needs Backup?
++ Definitely Yes
+  The following data should always be backed up:
+  - Business-related data
+  - System configuration files
+  - User files (usually under =/home=)
+
++ Maybe
+  - Spooling directories (for printing, mail, etc.)
+  - Logging files (found in =/var/log=, and elsewhere)
+
++ Probably Not
+  - Software that can easily be re-installed; on a well-managed system, this should be almost everything
+  - The =/tmp= directory, because its contents are indeed supposed to be only temporary
+
++ Definitely Not
+  - Pseudo-filesystems such as =/proc=, =/dev= and =/sys=
+  - Any swap partitions or files
+
+Obviously, files essential to your organization require backup.
+Configuration files may change frequently, and along with individual user's files, require backup as well.
+
+Logging files can be important if you have to investigate your system's history, which can be particularly important for detecting intrusions and other security violations.
+
+You don't have to back up anything that can easily be re-installed.
+Also, the swap partitions (or files) and =/proc= filesystems are generally not useful or necessary to back up, since the data in these areas is basically temporary (just like in the =/tmp= directory).
+** Backup vs. Archive
+All backup media have a finite lifetime before becoming unreadable.
+The conventional estimates are listed below:
++ Magnetic Tapes: 10-30 years
++ CDs and DVDs: 3-10 years
++ Hard Disks: 2-5 years
+
+These lifetimes is very sensitive to:
++ Environmental conditions (temperature, humidity, etc.)
++ Quality of media
++ Having working software that can read data on current operating systems and hardware
+
+Lifetime is sufficient for backup, but not for permanent digital archiving.
+
+For lifetimes longer than the usual backup timescales, data can be preserved using multiple copies, plus copying over to newer media from time to time.
+For very long times (i.e., many decades, centuries, etc.), standard methods do not work easily, as everything can go obsolete: hardware, software and document format, media.
+
+None of the inexpensive digital formats can actually compete with paper and film for long periods of time (if they are properly stored and continuously cared for - like wine).
+This is a problem serious people think about and there should be good solutions available before all is lost.
+** Tape Drives
+Tape drives are not as common as they used to be. They are relatively slow and permit only sequential access.
+On any modern setup, they are rarely used for primary backup. They are sometimes used for off-site storage for archival purposes, for long time reference.
+However, magnetic tape drives always have only a finite lifetime without physical degradation and loss of data.
+
+Modern tape drives are usually of the /LTO/ (Linear Tape Open) variety, whose first versions appeared in the late 1990s as an open standards alternative; early formats were mostly proprietary.
+Early versions held up to 100 GB; newer versions can hold 2.5 TB or more in a cartridge of the same size.
+
+Day-to-day backups are usually done with some form of /NAS/ (Network Attached Storage) or with cloud-based solutions, making new tape-based installations less and less attractive.
+However, they can still be found, and system administrators may be required to deal with them.
+
+In what follows, we will try not to focus on particular physical forms for the backup media, and will speak more abstractly.
+** Backup Methods
+You should never have all backups residing in the same physical location as the systems being protected. Otherwise, fire or other physical damage could lead to a total loss. In the past, this usually meant physically transporting magnetic tapes to a secure location.
+Today, this is more likely to mean transferring backup files over the Internet to alternative physical locations. Obviously, this has to be done in a secure way, using encryption and other security precautions as is appropriate.
+
+Several different kinds of backup methods can be used, often in concert with each other.
++ Full
+  Backup for all files on the system.
++ Incremental
+  Backup for all files that have changed since the last incremental or full backup.
++ Differential
+  Backup for all files that have changed since the last full backup.
++ Multiple level incremental
+  Backup for all files that have changed since the previous backup at the same or a previous level.
++ User
+  Backup only for files in a specific user's directory.
+** Backup Strategies
+We should note that backup methods are useless without associated *restore* methods. You have to take into account the robustness, clarity and ease of both directions when selecting strategies.
+
+The simplest backup scheme is to do a full backup of everything once, and then perform incremental backups of everything that subsequently changes.
+While full backups can take a lot of time, restoring from incremental backups can be more difficult and time consuming. Thus, you can use a mix of both to optimize time and effort.
+
+An example of one useful strategy involving tapes (you can easily substitute other media in the description):
+1. Use tape 1 for a full backup on Friday
+2. Use tapes 2-5 for incremental backups on Monday-Thursday
+3. Use tape 6 for full backup on second Friday
+4. Use tapes 2-5 for incremental backups on second Monday-Thursday
+5. Do not overwrite tape 1 until completion of full backup on tape 6
+6. After full backup to tape 6, move tape 1 to external location for disaster recovery
+7. For next full backup (next Friday) exchange tape 1 for tape 6
+A good rule of thumb is to have at least two weeks of backups available.
+** Some Backup Related Utilities
+A number of programs are used for backup purposes.
+~cpio~ and ~tar~ create and extract archives of files.
+
+The archives are often compressed with /gzip/, /bzip2/, or /xz/.
+The archive file may be written to disk, magnetic tape, or any other device which can hold files.
+Archives are very useful for transferring files from one filesystem or machine to another.
+
+~dd~ is a powerful utility often used to transfer raw data between media. It can be used to copy entire partitions or entire disks.
+
+~rsync~ is a powerful utility that can synchronize directory subtrees or entire filesystems across a network, or between different filesystem locations on a local machine.
+
+~dump~ and ~restore~ are ancient utilities which were designed specifically for backups.
+They read from the filesystem directly (which is more efficient).
+However, they must be restored only on the same filesystem type that they came from. There are newer alternatives.
+
+~mt~ is used for querying and positioning tapes before performing backups and restores.
+** Using tar for Backups
+~tar~ is easy to use:
++ When creating a ~tar~ archive, for each directory given as an argument, all files and subdirectories will be included in the archive.
+  When restoring, it reconstitutes directories as necessary.
++ It even has a ~--newer~ option that lets you do incremental backups.
++ The version of ~tar~ used in Linux can also handle backups that do not fit on one tape or whatever device you use.
+
+Below are a few examples of how to use the tar command for backups.
++ Create an archive using -c or just c:
+  #+begin_src bash
+  $ tar cvf  /dev/st0 /root
+  $ tar -cvf /dev/st0 /root
+  #+end_src
++ Create with multi-volume option, using -M:
+  #+begin_src bash
+  $ tar -cMf /dev/st0 /root
+  #+end_src
+  You will be prompted to put the next tape when needed.
++ Verify files with the compare option, using ~-d~ or ~--compare~:
+  #+begin_src bash
+  $ tar --compare --verbose --file /dev/st0
+  $ tar -dvf /dev/st0
+  #+end_src
++ You can also specify a device or file with the ~-f~ or ~--file~ option.
++ After you make a backup, you can make sure that it is complete and correct using the above verification option.
+
+By default, ~tar~ will recursively include all subdirectories in the archive.
+
+When you create an archive, ~tar~ prints a message about removing leading slashes from the absolute path name.
+While this allows you to restore the files anywhere, the default behavior can be modified.
+
+Most ~tar~ options can be given in short form with one dash, or long form with two: ~-c~ is completely equivalent to ~--create~.
+Also note that you can combine options (when using the short notation), so that you don't have to type every dash.
+
+Furthermore, single-dashed tar options can be used with or without dashes:
+#+begin_src bash
+$ tar cvf file.tar dir1
+#+end_src
+has the same result as:
+#+begin_src bash
+$ tar -cvf file.tar dir1
+#+end_src
+** Using tar for Restoring Files
+The ~-x~ or ~--extract~ option extracts files from an archive, all by default. You can narrow the file extraction list by specifying only particular files.
+If a directory is specified, all included files and subdirectories are also extracted.
+
+The ~-p~ or ~--same-permissions~ options ensures files are restored with their original permissions.
+The ~-t~ or ~--list~ option lists, but does not extract, the files in the archive.
+
+You can see several examples below.
++ Extract from an archive with ~-x~ or ~--extract~ using the following commands:
+  #+begin_src bash
+  $ tar --extract --same-permissions --verbose --file /dev/st0
+  $ tar -xpvf /dev/st0
+  $ tar  xpvf /dev/st0
+  #+end_src
++ Specify only specific files to restore with this command:
+  #+begin_src bash
+  $ tar -xvf /dev/st0 somefile
+  #+end_src
++ List the contents of a tar backup by running:
+  #+begin_src bash
+  $ tar --list --file /dev/st0
+  $ tar -tf /dev/st0
+  #+end_src
+** Incremental Backups with tar
+You can do an incremental backup with tar using the ~-N~ (or the equivalent ~--newer~), or the ~--after-date~ options.
+Either option requires specifying either a date or a qualified (reference) file name. See commands below:
+#+begin_src bash
+$ tar --create --newer '2011-12-1' -vzf backup1.tgz /var/tmp
+$ tar --create --after-date '2011-12-1' -vzf backup1.tgz /var/tmp
+#+end_src
+Either form creates a backup archive of all files in =/var/tmp= which were modified after December 1, 2011.
+
+Because ~tar~ only looks at a file's date, it does not consider any other changes to the file, such as permissions or file name.
+To include files with these changes in the incremental backup, use ~find~ and create a list of files to be backed up.
+
+When followed by an option like ~--newer~ you must use the dash in options like ~-vzf~, or tar will get confused.
+This kind of option specification confusion sometimes occurs with old UNIX utilities like ~ps~ and ~tar~ with complicated histories involving different families of UNIX.
+** Archive Compression Methods
+It is often desired to compress files to save disk space and/or network transmission time, especially since modern machines will often find the /compress -> transmit -> decompress/ cycle faster than just transmitting (or copying) an uncompressed file.
+
+In order to increase compression efficiency (which comes at the cost of longer compression times):
++ gzip
+  Uses Lempel-Ziv Coding (LZ77) and produces ~.gz~ files.
++ bzip2
+  Uses Burrows-Wheeler block sorting text compression algorithm and Huffman coding, and produces .bz2 files.
++ xz
+  Produces ~.xz~ files and also supports legacy ~.lzma~ format.
+
+For example, The Linux Kernel Archives only uses ~xz~ format now for downloading Linux kernels.
+
+The compression utilities are very easily (and often) used in combination with the tar command:
+#+begin_src bash
+$ tar zcvf source.tar.gz source
+$ tar jcvf source.tar.bz2 source
+$ tar Jcvf source.tar.xz source
+#+end_src
+for producing a compressed archive.
+Note that the first command above has the exact same effect as doing:
+#+begin_src bash
+$ tar cvf source.tar source ; gzip -v source.tar
+#+end_src
+but is more efficient because:
++ There is no intermediate file storage
++ Archiving and compression happen simultaneously in the pipeline
+
+For decompression, use the following commands:
+#+begin_src bash
+$ tar xzvf source.tar.gz
+$ tar xjvf source.tar.bz2
+$ tar xJvf source.tar.xz
+#+end_src
+or even simpler:
+#+begin_src bash
+$ tar xvf source.tar.gz
+#+end_src
+as modern versions of tar can sense the method of compression and take care of it automatically.
+
+Obviously, it is not worth using these methods on archives whose component files are already compressed, such as ~.jpg~ images, or ~.pdf~ files, etc.
+** dd
+~dd~ is a common UNIX-based program whose primary purpose is the low-level copying and conversion of raw data.
+It is used to copy a specified number of bytes or blocks, performing on-the-fly byte order conversions, as well as being able to convert data from one form to another.
+It can also be used to copy regions of raw device files, for example backing up the boot sector of a hard disk, or to read fixed amounts of data from special files like =/dev/zero= or =/dev/random=.
+The basic syntax is:
+#+begin_src bash
+$ dd if=input-file of=output-file options
+#+end_src
+
+Below are some examples of using the ~dd~ utility.
++ Create a file with the following command:
+  #+begin_src bash
+  $ dd if=/dev/zero of=outfile bs=1M count=10
+  #+end_src
++ Back up an entire hard drive to another by running:
+  #+begin_src bash
+  $ dd if=/dev/sda of=/dev/sdb
+  #+end_src
++ Create an image of a hard disk with:
+  #+begin_src bash
+  $ dd if=/dev/sda of=sdadisk.img
+  #+end_src
++ Back up a partition with this command:
+  #+begin_src bash
+  $ dd if=/dev/sda1 of=partition1.img
+  #+end_src
++ Back up a CD ROM by doing:
+  #+begin_src bash
+  $ dd if=/dev/cdrom of=tgsservice.iso bs=2048
+  #+end_src
+** Using rsync for Backups
+~rsync~ (remote synchronize) is used to transfer files across a network (or between different locations on the same machine), as in:
+#+begin_src bash
+$ rsync [options] sourcefile destinationfile
+#+end_src
+The source and destination can take the form of ~target:path~, where target can be in the form of ~[user@]host~.
+The /user@/ part is optional and used if the remote user is different from the local user.
+Thus, these are all possible rsync commands:
+#+begin_src bash
+$ rsync file.tar someone@backup.mydomain:/usr/local
+$ rsync -r --dry-run /usr/local /BACKUP/usr
+#+end_src
+You have to be very careful with rsync about exact location specifications (especially if you use the ~--delete~ option), so it is highly recommended to use the ~--dry-run~ option first, and then repeat if the projected action looks correct.
+
+~rsync~ is very clever; it checks local files against remote files in small chunks, and it is very efficient in that when copying one directory to a similar directory, only the differences are copied over the network.
+This synchronizes the second directory with the first directory. You may often use the ~-r~ option, which causes ~rsync~ to recursively walk down the directory tree copying all files and directories below the one listed as the /sourcefile/.
+Thus, a very useful way to back up a project directory might be similar to this command:
+#+begin_src bash
+$ rsync -r project-X archive-machine:archives/project-X
+#+end_src
+A simple (and very effective and very fast) backup strategy is to simply duplicate directories or partitions across a network with rsync commands and to do so frequently.
+** Backup Programs
+There is no shortage of available backup program suites available for Linux, including proprietary applications or those supplied by storage vendors, as well as open-source applications.
++ Amanda
+  [[https:amanda.org/][Amanda]] (Advanced Maryland Automatic Network Disk Archiver) uses native utilities (including ~tar~ and ~dump~), but is far more robust and controllable.
+  Amanda is generally available on Enterprise Linux systems through the usual repositories.
++ Bacula
+  [[https:bacula.org/7.0.x-manuals/en/main/Main_Reference.html][Bacula]] is designed for automatic backup on heterogeneous networks.
+  It can be rather complicated to use and is recommended (by its authors) only to experienced administrators.
+  Bacula is generally available on Enterprise Linux systems through the usual repositories.
++ Clonezilla
+  [[https:clonezilla.org/][Clonezilla]] is a very robust disk cloning program, which can make images of disks and deploy them, either to restore a backup, or to be used for /ghosting/, to provide an image that can be used to install many machines.
+  The program comes in two versions: *Clonezilla Live*, which is good for single machine backup and recovery, and *Clonezilla SE*, server edition, which can clone to many computers at the same time.
+  Clonezilla is not very hard to use and is extremely flexible, supporting many operating systems (not just Linux), filesystem types, and boot loaders.
+**
 
 * Linux Security Modules
 ** Overview
